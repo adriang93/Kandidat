@@ -32,7 +32,7 @@ public:
 
 	static void init(VideoCapture&);
 	
-	static void readFrame(Mat&);
+	static void drawShit(int x, int y, Mat&);
 
 	static void calcCoords(Mat&);
 

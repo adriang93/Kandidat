@@ -23,8 +23,8 @@ using namespace std;
 int posX = 0;
 int posY = 0;
 
-int iLowH = 100;
-int iHighH = 160;
+int iLowH = 80;
+int iHighH = 100;
 
 int iLowS = 100;
 int iHighS = 255;
@@ -35,7 +35,18 @@ int iHighV = 255;
 int iLastY = -1;
 int iLastX = -1;
 
+const int FRAME_WIDTH = 640;
+const int FRAME_HEIGHT = 480;
+
 Mat img;
+
+string intToString(int number){
+
+
+	std::stringstream ss;
+	ss << number;
+	return ss.str();
+}
 
 vector<int> Coords::getCoords()
 {
@@ -57,7 +68,7 @@ void Coords::setCoords(int x, int y){
 
 void Coords::calcCoords(Mat& imgOriginal){
 
-	Mat imgLines;
+	//Mat imgLines;
 	Mat imgHSV;
 	
 	cvtColor(imgOriginal, imgHSV, COLOR_BGR2HSV); //Convert the captured frame from BGR to HSV
@@ -71,6 +82,19 @@ void Coords::calcCoords(Mat& imgOriginal){
 	//morphological closing (removes small holes from the foreground)
 	dilate(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
 	erode(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
+
+	//create windows
+	namedWindow("Control", CV_WINDOW_AUTOSIZE);
+
+	//Create trackbars in "Control" window
+	createTrackbar("LowH", "Control", &iLowH, 179); //Hue (0 - 179)
+	createTrackbar("HighH", "Control", &iHighH, 179);
+
+	createTrackbar("LowS", "Control", &iLowS, 255); //Saturation (0 - 255)
+	createTrackbar("HighS", "Control", &iHighS, 255);
+
+	createTrackbar("LowV", "Control", &iLowV, 255);//Value (0 - 255)
+	createTrackbar("HighV", "Control", &iHighV, 255);
 
 	imshow("Control", imgHSV); //show the thresholded image
 
@@ -90,7 +114,7 @@ void Coords::calcCoords(Mat& imgOriginal){
 
 		setCoords(coordX, coordY);
 
-		readFrame(imgOriginal);
+		drawShit(coordX, coordY, imgOriginal);
 
 	}
 
@@ -112,12 +136,12 @@ void Coords::init(VideoCapture& cap)
 			break;
 		}
 
-		Mat imgLines = Mat::zeros(imgOriginal.size(), CV_8UC3);
+		//Mat imgLines = Mat::zeros(imgOriginal.size(), CV_8UC3);
 
 		calcCoords(imgOriginal);
 
-		coord = getCoords();
-		cout << "(" << coord.at(0) << "," << coord.at(1) << ")" << endl;
+		//coord = getCoords();
+		//cout << "(" << coord.at(0) << "," << coord.at(1) << ")" << endl;
 
 		if (waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
 		{
@@ -129,21 +153,35 @@ void Coords::init(VideoCapture& cap)
 	return;
 }
 
-void Coords::readFrame(Mat& imgOriginal){
+void Coords::drawShit(int x, int y, Mat& imgOriginal){
 
-	Mat imgLines = Mat::zeros(imgOriginal.size(), CV_8UC3);;
+		//use some of the openCV drawing functions to draw crosshairs
+		//on your tracked image!
+
+		//UPDATE:JUNE 18TH, 2013
+		//added 'if' and 'else' statements to prevent
+		//memory errors from writing off the screen (ie. (-25,-25) is not within the window!)
+
+		circle(imgOriginal, Point(x, y), 10, Scalar(0, 255, 0), 2);
+		if (y - 10>0)
+			line(imgOriginal, Point(x, y), Point(x, y - 10), Scalar(0, 255, 0), 2);
+		else line(imgOriginal, Point(x, y), Point(x, 0), Scalar(0, 255, 0), 2);
+		if (y + 10<FRAME_HEIGHT)
+			line(imgOriginal, Point(x, y), Point(x, y + 10), Scalar(0, 255, 0), 2);
+		else line(imgOriginal, Point(x, y), Point(x, FRAME_HEIGHT), Scalar(0, 255, 0), 2);
+		if (x - 10>0)
+			line(imgOriginal, Point(x, y), Point(x - 10, y), Scalar(0, 255, 0), 2);
+		else line(imgOriginal, Point(x, y), Point(0, y), Scalar(0, 255, 0), 2);
+		if (x + 10<FRAME_WIDTH)
+			line(imgOriginal, Point(x, y), Point(x + 10, y), Scalar(0, 255, 0), 2);
+		else line(imgOriginal, Point(x, y), Point(FRAME_WIDTH, y), Scalar(0, 255, 0), 2);
+
+		putText(imgOriginal, intToString(x) + "," + intToString(y), Point(x, y + 30), 1, 1, Scalar(0, 255, 0), 2);
+
 	
-	if (iLastX >= 0 && iLastY >= 0 && posX >= 0 && posY >= 0)
-	{
-		//Draw a red line from the previous point to the current point
-		line(imgLines, Point(posX, posY), Point(iLastX, iLastY), CV_RGB(239, 224, 21), 2, 8, 0);
-	}
+		imshow("Original", imgOriginal);
 
-	iLastX = posX;
-	iLastY = posY;
-
-	img = imgOriginal + imgLines;
-	imshow("Original", img);
+	
 
 
 }
