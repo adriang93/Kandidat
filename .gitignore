@@ -34,3 +34,5 @@ nbproject
 *.opensdf
 *.sdf
 *.user
+*.vxproj
+*.filters
