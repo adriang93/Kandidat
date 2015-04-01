@@ -3,7 +3,7 @@
 
 using cv::Mat;
 
-Coords::Coords(HSVfilter filter) : filter(filter), ready(false) {}
+Coords::Coords(HSVfilter filter) : filter(filter), ready(false), validCoords(false) {}
 Coords::Coords() {}
 
 void Coords::SetHSV(HSVfilter newFilter)
@@ -95,6 +95,10 @@ void Coords::CalculateCoords(const cv::Mat& imgOriginal) {
 		int coordY = static_cast<int>(dM01 / dArea + 0.5);
 
 		SetCoords(coordX, coordY);
+		validCoords = true;
+	}
+	else {
+		validCoords = false;
 	}
 
 	//Lås bilden när vi sparar kopian för att förhindra att man läser en halvskriven bild

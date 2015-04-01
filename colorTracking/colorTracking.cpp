@@ -35,8 +35,15 @@ int main(int argc, char** argv)
 
 		Coords coordsModule(filter);
 		coordsModule.CalculateCoords(imgOriginal);
-		std::pair<int, int> coords = coordsModule.GetCoords();
-		cout << "(" << coords.first << "," << coords.second << ")" << endl;
+		if (coordsModule.ValidCoords) {
+			std::pair<int, int> coords = coordsModule.GetCoords();
+			cout << "(" << coords.first << "," << coords.second << ")" << endl;
+		}
+		else
+		{
+			cout << "(" << -1 << "," << -1 << ")" << endl;
+		}
+		cv::imshow("Bild", coordsModule.GetFilteredImage());
 	}
 
 	return 0;
