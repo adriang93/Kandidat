@@ -1,43 +1,43 @@
-// colorTracking.cpp : Defines the entry point for the console application.
-//
+// Testkod för att kunna testa Coords separat från resten av applikationen
 
 #include "stdafx.h"
-#include "opencv2/core/core.hpp"
-#include "opencv2/flann/miniflann.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/photo/photo.hpp"
-#include "opencv2/video/video.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "opencv2/objdetect/objdetect.hpp"
-#include "opencv2/calib3d/calib3d.hpp"
-#include "opencv2/ml/ml.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/core/core_c.h"
-#include "opencv2/highgui/highgui_c.h"
-#include "opencv2/imgproc/imgproc_c.h"
+#include "colorTracking.h"
 #include <iostream>
-#include <stdio.h>
-#include <stdlib.h>
-#include "Coords.h"
 
-using namespace cv;
-using namespace std;
-
-Coords cord;
-
+using std::cin;
+using std::cout;
+using std::endl;
 
 int main(int argc, char** argv)
 {
 	
-	VideoCapture cap(0); //capture the video from webcam
+	cv::VideoCapture cap(0); //capture the video from webcam
 
 	if (!cap.isOpened())  // if not success, exit program
 	{
-		cout << "Cannot access videostream" << endl;
+		std::cout << "Cannot access videostream" << std::endl;
 		return 0;
 	}
 
-	cord.init(cap);
+	while (true) {
+
+		cv::Mat imgOriginal;
+
+		bool bSuccess = cap.read(imgOriginal); // read a new frame from video
+
+		if (!bSuccess) //if not success, break loop
+		{
+			cout << "Cannot read a frame from video stream" << endl;
+			break;
+		}
+
+		Coords::HSVfilter filter(0, 255, 0, 255, 0, 255);
+
+		Coords coordsModule(filter);
+		coordsModule.CalculateCoords(imgOriginal);
+		std::pair<int, int> coords = coordsModule.GetCoords();
+		cout << "(" << coords.first << "," << coords.second << ")" << endl;
+	}
 
 	return 0;
 }

@@ -7,6 +7,7 @@
 
 #include "targetver.h"
 
+#include "opencv2\opencv.hpp"
 #include <stdio.h>
 #include <tchar.h>
 

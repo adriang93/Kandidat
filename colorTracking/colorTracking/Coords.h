@@ -1,46 +1,47 @@
 #pragma once
 
 #include "stdafx.h"
-#include "opencv2/core/core.hpp"
-#include "opencv2/flann/miniflann.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/photo/photo.hpp"
-#include "opencv2/video/video.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "opencv2/objdetect/objdetect.hpp"
-#include "opencv2/calib3d/calib3d.hpp"
-#include "opencv2/ml/ml.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/core/core_c.h"
-#include "opencv2/highgui/highgui_c.h"
-#include "opencv2/imgproc/imgproc_c.h"
-#include <iostream>
-#include <stdio.h>
-#include <stdlib.h>
-
-
-#ifndef COORDINATES
-#define COORDINATES
-
-using namespace std;
-using namespace cv;
+#include <mutex>
 
 class Coords
 {
 public:
-	static vector<int> getCoords();
 
-	static void init(VideoCapture&);
-	
-	static void drawShit(int x, int y, Mat&);
+	class HSVfilter {
+	public:
+		HSVfilter(int lowH, int highH, int lowS, int highS, int lowV, int highV) :
+			lowH(lowH), highH(highH), lowS(lowS), highS(highS), lowV(lowV), highV(highV) {
+		}
+		HSVfilter() {
+			HSVfilter(0, 0, 0, 0, 0, 0);
+		}
+		int lowH;
+		int highH;
+		int lowS;
+		int highS;
+		int lowV;
+		int highV;
+	};
 
-	static void calcCoords(Mat&);
+	Coords(Coords::HSVfilter);
+	Coords();
 
-private: 
+	void SetHSV(Coords::HSVfilter);
+	bool Ready();
+	bool ValidCoords();
+	cv::Mat GetFilteredImage();
+	std::pair<int, int> GetCoords();
+	void CalculateCoords(const cv::Mat&);
 
-	static void setCoords(int, int);
-
-	
+private:
+	void SetCoords(int, int);
+	static void DrawCross(int x, int y, cv::Mat&);
+	HSVfilter filter;
+	cv::Mat filteredImage;
+	int posX;
+	int posY;
+	bool ready;
+	bool validCoords;
+	std::mutex coordsLock;
+	std::mutex imageLock;
 };
-
-#endif
