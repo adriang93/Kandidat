@@ -35,7 +35,7 @@ int main(int argc, char** argv)
 
 		Coords coordsModule(filter);
 		coordsModule.CalculateCoords(imgOriginal);
-		if (coordsModule.ValidCoords) {
+		if (coordsModule.ValidCoords()) {
 			std::pair<int, int> coords = coordsModule.GetCoords();
 			cout << "(" << coords.first << "," << coords.second << ")" << endl;
 		}
