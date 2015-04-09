@@ -9,6 +9,13 @@ void WebcamApp::calcCoordsCall(cv::Mat& image) {
 	coords.CalculateCoords(image);
 }
 
+void WebcamApp::SetConsoleRow(int row) {
+	COORD pos;
+	pos.X = 0;
+	pos.Y = row;
+	SetConsoleCursorPosition(consoleHandle, pos);
+}
+
 WebcamApp::WebcamApp() {
 	std::fstream file("values.txt");
 	int a, b, c, d, e, f, g;
@@ -31,7 +38,7 @@ WebcamApp::~WebcamApp() {
 }
 
 void WebcamApp::initGl() {
-	cv::imshow("Lakitu", cv::imread("Resources/lakitu.png", CV_LOAD_IMAGE_COLOR));
+	//cv::imshow("Lakitu", cv::imread("Resources/lakitu.png", CV_LOAD_IMAGE_COLOR));
 
 	RiftApp::initGl();
 	compass.SetHMD(&hmd);
@@ -48,24 +55,30 @@ void WebcamApp::initGl() {
 }
 
 void WebcamApp::update() {
-	COORD pos;
-	pos.X = 0;
-	pos.Y = 0;
-	SetConsoleCursorPosition(consoleHandle, pos);
-
 	cv::Mat captureData;
 	if (captureHandler.GetFrame(captureData)) {
 		if (coords.Ready()) {
-			if (!mode) {
+			if (!displayMode) {
 				returnImage = captureData;
 			}
-			else if (mode == 1) {
+			else if (displayMode == 1) {
 				returnImage = coords.GetFilteredImage();
 			}
 			else {
 				returnImage = coords.GetCircledImage();
 			}
-			//cv::flip(returnImage.clone(), returnImage, 0);
+			cv::flip(returnImage, returnImage, 0);
+
+			SetConsoleRow(rows::posRow);
+			std::pair<int, int> pos = coords.GetCoords();
+			std::cout << "pos: " << pos.first << ", " << pos.second;
+			SetConsoleRow(rows::validRow);
+			std::cout << "valid: " << coords.ValidCoords();
+			SetConsoleRow(rows::corrRow);
+			std::cout << "corr: " << coords.GetCorrellation();
+
+			Coords::DrawCross(pos.first, pos.second, returnImage);
+			cv::putText(returnImage, "Test", cv::Point(0, 0), cv::FONT_HERSHEY_PLAIN, 1, cv::Scalar::all(255));
 			imshow("Bild", returnImage);
 			calcThread.join();
 			calcThread = std::thread(&WebcamApp::calcCoordsCall, this, captureData);
@@ -74,7 +87,9 @@ void WebcamApp::update() {
 			calcThread = std::thread(&WebcamApp::calcCoordsCall, this, captureData);
 			started = true;
 		}
-		std::cout << "Heading: " << compass.FilteredHeading() << std::endl;
+
+		SetConsoleRow(rows::headingOVRRow);
+		std::cout << "Heading: " << compass.FilteredHeading();
 		using namespace oglplus;
 		Context::Bound(TextureTarget::_2D, *texture)
 			.Image2D(0, PixelDataInternalFormat::RGBA8,
@@ -85,19 +100,23 @@ void WebcamApp::update() {
 }
 void WebcamApp::onKey(int key, int scancode, int action, int mods) {
 	if (action == GLFW_PRESS) {
-		switch (key) {
-		case GLFW_KEY_C:
+		if (key == GLFW_KEY_C) {
 			coordsMode ^= Coords::COORDS_CIRCLE;
-		case GLFW_KEY_F:
-			coordsMode ^= Coords::COORDS_FILTER;
-		case GLFW_KEY_D:
-			mode++;
-			if (mode = 3) {
-				mode = 0;
-			}
-		default:
-			coords.SetMode(coordsMode);
 		}
+		else if (key == GLFW_KEY_F) {
+			coordsMode ^= Coords::COORDS_FILTER;
+		}
+		else if (key == GLFW_KEY_M) {
+			displayMode++;
+			if (displayMode == 3) {
+				displayMode = 0;
+			}
+		}
+		coords.SetMode(coordsMode);
+		SetConsoleRow(rows::modeRow);
+		std::cout << "Mode: " << displayMode;
+		SetConsoleRow(rows::coordsModeRow);
+		std::cout << "coordsMode: " << coordsMode;
 	}
 	RiftApp::onKey(key, scancode, action, mods);
 }
@@ -118,46 +137,3 @@ void WebcamApp::renderScene() {
 }
 
 RUN_OVR_APP(WebcamApp);
-
-/*
-int main(int argc, char** argv)
-{
-
-
-
-	if (!cap.isOpened())  // if not success, exit program
-	{
-		std::cout << "Cannot access videostream" << std::endl;
-		return 0;
-	}
-
-	while (true) {
-
-		cv::Mat imgOriginal;
-
-		bool bSuccess = cap.read(imgOriginal); // read a new frame from video
-
-		if (!bSuccess) //if not success, break loop
-		{
-			std::cout << "Cannot read a frame from video stream" << std::endl;
-			break;
-		}
-
-		Coords::HSVfilter filter(0, 255, 0, 255, 0, 255);
-
-		Coords coordsModule(filter);
-		coordsModule.CalculateCoords(imgOriginal);
-		if (coordsModule.ValidCoords()) {
-			std::pair<int, int> coords = coordsModule.GetCoords();
-			std::cout << "(" << coords.first << "," << coords.second << ")" << std::endl;
-		}
-		else
-		{
-			std::cout << "(" << -1 << "," << -1 << ")" << std::endl;
-		}
-		cv::imshow("Bild", coordsModule.GetFilteredImage());
-	}
-
-	return 0;
-}
-*/

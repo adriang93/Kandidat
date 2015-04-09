@@ -70,6 +70,9 @@ std::pair<int, int> Coords::GetCoords() {
 	else if (validCoords & COORDS_FILTER) {
 		return posFilter;
 	}
+	else {
+		return std::pair<int, int>(0, 0);
+	}
 }
 
 void Coords::CalculateCoords(const cv::Mat& imgOriginal) {
@@ -77,7 +80,7 @@ void Coords::CalculateCoords(const cv::Mat& imgOriginal) {
 
 	ready = false;
 
-	std::unique_lock<std::mutex> coordsGuard(coordsLock);
+	std::unique_lock<std::mutex> coordsGuard(coordsLock, std::defer_lock);
 	if (mode & COORDS_FILTER)
 	{
 		cv::Mat imgHSV;
@@ -133,7 +136,6 @@ void Coords::CalculateCoords(const cv::Mat& imgOriginal) {
 
 		//Lås bilden när vi sparar kopian för att förhindra att man läser en halvskriven bild
 		std::unique_lock<std::mutex> filterGuard(filteredLock);
-		filterGuard.lock();
 		filteredImage = imgHSV;
 		filterGuard.unlock();
 	}
@@ -171,12 +173,12 @@ void Coords::CalculateCoords(const cv::Mat& imgOriginal) {
 			circle(imgCircles, center, radius, Scalar(0, 0, 255), 3, 8, 0);
 		}
 		coordsGuard.lock();
-		posCircle.first = circles[largest][0];
-		posCircle.second = circles[largest][1];
 		if (largestRadius == 0) {
 			validCoords |= ~COORDS_CIRCLE;
 		}
 		else {
+			posCircle.first = circles[largest][0];
+			posCircle.second = circles[largest][1];
 			validCoords |= COORDS_CIRCLE;
 		}
 		coordsGuard.unlock();

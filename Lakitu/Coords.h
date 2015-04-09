@@ -47,7 +47,7 @@ private:
 	cv::Mat filteredImage;
 	cv::Mat circledImage;
 	std::pair<int, int> posFilter;
-	std::pair<int, int> posCircle; 
+	std::pair<int, int> posCircle;
 	bool ready;
 	int validCoords;
 	int mode = COORDS_FILTER;

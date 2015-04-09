@@ -13,10 +13,20 @@
 
 class WebcamApp : public RiftApp {
 private:
+	enum rows {
+		headingOVRRow = 0,
+		headingDroneRow = 1,
+		distanceRow = 2,
+		modeRow = 3,
+		coordsModeRow = 4,
+		posRow = 5,
+		validRow = 6,
+		corrRow = 7
+	};
 	bool doneCalculating = false;
 	bool started = false;
 	bool cross = false;
-	int mode = 0;
+	int displayMode = 0;
 	int coordsMode = Coords::COORDS_FILTER;
 	std::thread calcThread;
 	Coords coords;
@@ -26,6 +36,7 @@ private:
 	HANDLE consoleHandle;
 
 	void calcCoordsCall(cv::Mat& image);
+	void SetConsoleRow(int);
 
 	TexturePtr texture;
 	ProgramPtr program;
