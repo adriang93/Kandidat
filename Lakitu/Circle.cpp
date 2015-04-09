@@ -13,18 +13,18 @@ void Circle::FindCircles(Mat& src) {
 
 	Mat src_gray;
 
-	/// Convert it to gray
+	// Convert it to gray
 	cvtColor(src, src_gray, CV_BGR2GRAY);
 
-	/// Reduce the noise so we avoid false circle detection
+	// Reduce the noise so we avoid false circle detection
 	GaussianBlur(src_gray, src_gray, Size(9, 9), 2, 2);
 
 	vector<Vec3f> circles;
 
-	/// Apply the Hough Transform to find the circles
+	// Apply the Hough Transform to find the circles
 	HoughCircles(src_gray, circles, CV_HOUGH_GRADIENT, 1, src_gray.rows / 8, 120, 60, 0, 0);
 
-	/// Draw the circles detected
+	// Draw the circles detected
 	for (size_t i = 0; i < circles.size(); i++)
 	{
 		Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
@@ -41,7 +41,7 @@ void Circle::FindCircles(Mat& src) {
 
 	}
 
-	/// Show your results
+	// Show your results
 	namedWindow("Hough Circle Transform Demo", CV_WINDOW_AUTOSIZE);
 	imshow("Hough Circle Transform Demo", src);
 	imshow("MR.grey", src_gray);
