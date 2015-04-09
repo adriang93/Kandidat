@@ -57,7 +57,7 @@ float Compass::FilteredHeading() {
 }
 
 float Compass::CalculateHeading(const ovrVector3f& magSensor) {
-	float direction;
+	float direction = 0;
 	const float PI = 3.1459f;
 
 	if (magSensor.x > 0) {
