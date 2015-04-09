@@ -6,23 +6,23 @@
 
 
 void WebcamApp::calcCoordsCall(cv::Mat& image) {
-	doneCalculating = false;
 	coords.CalculateCoords(image);
-	doneCalculating = true;
 }
 
 WebcamApp::WebcamApp() {
 	std::fstream file("values.txt");
 	int a, b, c, d, e, f, g;
 	file >> a >> b >> c >> d >> e >> f >> g;
-	//coords = Coords(a, b, c, d, e, f);
-
+	Coords::HSVfilter filter(a, b, c, d, e, f);
 	WebcamHandler webcamHandler(g);
+	coords.SetHSV(filter); 
+	coords.SetMode(coordsMode);
 
 	if (!AllocConsole()) {
 		FAIL("Could not create console");
 	}
 	freopen("CONOUT$", "w", stdout);
+	consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
 }
 
 WebcamApp::~WebcamApp() {
@@ -31,11 +31,12 @@ WebcamApp::~WebcamApp() {
 }
 
 void WebcamApp::initGl() {
-	//cv::imshow("Lakitu", cv::imread("Resources/lakitu.png", CV_LOAD_IMAGE_COLOR));
+	cv::imshow("Lakitu", cv::imread("Resources/lakitu.png", CV_LOAD_IMAGE_COLOR));
+
+	RiftApp::initGl();
 	compass.SetHMD(&hmd);
 	compass.Start();
 
-	RiftApp::initGl();
 	using namespace oglplus;
 	texture = TexturePtr(new Texture());
 	Context::Bound(TextureTarget::_2D, *texture)
@@ -47,10 +48,24 @@ void WebcamApp::initGl() {
 }
 
 void WebcamApp::update() {
+	COORD pos;
+	pos.X = 0;
+	pos.Y = 0;
+	SetConsoleCursorPosition(consoleHandle, pos);
+
 	cv::Mat captureData;
 	if (captureHandler.GetFrame(captureData)) {
-/*		if (doneCalculating) {
-			cv::flip(returnImage.clone(), returnImage, 0);
+		if (coords.Ready()) {
+			if (!mode) {
+				returnImage = captureData;
+			}
+			else if (mode == 1) {
+				returnImage = coords.GetFilteredImage();
+			}
+			else {
+				returnImage = coords.GetCircledImage();
+			}
+			//cv::flip(returnImage.clone(), returnImage, 0);
 			imshow("Bild", returnImage);
 			calcThread.join();
 			calcThread = std::thread(&WebcamApp::calcCoordsCall, this, captureData);
@@ -58,7 +73,7 @@ void WebcamApp::update() {
 		else if (!started) {
 			calcThread = std::thread(&WebcamApp::calcCoordsCall, this, captureData);
 			started = true;
-		}*/
+		}
 		std::cout << "Heading: " << compass.FilteredHeading() << std::endl;
 		using namespace oglplus;
 		Context::Bound(TextureTarget::_2D, *texture)
@@ -69,8 +84,20 @@ void WebcamApp::update() {
 	}
 }
 void WebcamApp::onKey(int key, int scancode, int action, int mods) {
-	if (action == GLFW_PRESS && key == GLFW_KEY_R) {
-		//coords.toggleImageFormat();
+	if (action == GLFW_PRESS) {
+		switch (key) {
+		case GLFW_KEY_C:
+			coordsMode ^= Coords::COORDS_CIRCLE;
+		case GLFW_KEY_F:
+			coordsMode ^= Coords::COORDS_FILTER;
+		case GLFW_KEY_D:
+			mode++;
+			if (mode = 3) {
+				mode = 0;
+			}
+		default:
+			coords.SetMode(coordsMode);
+		}
 	}
 	RiftApp::onKey(key, scancode, action, mods);
 }

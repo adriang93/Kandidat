@@ -23,6 +23,7 @@ Compass::~Compass() {
 void Compass::SensorLoop() {
 	while (this->hmd) {
 		ovrTrackingState tsState = ovrHmd_GetTrackingState(*hmd, ovr_GetTimeInSeconds());
+		
 		// The cpp compatibility layer is used to convert ovrPosef to Posef (see OVR_Math.h)
 		OVR::Posef pose = tsState.HeadPose.ThePose;
 		ovrVector3f rotation;

@@ -15,12 +15,15 @@ class WebcamApp : public RiftApp {
 private:
 	bool doneCalculating = false;
 	bool started = false;
-	bool filtered = false;
 	bool cross = false;
+	int mode = 0;
+	int coordsMode = Coords::COORDS_FILTER;
 	std::thread calcThread;
 	Coords coords;
 	Compass compass;
 	cv::Mat returnImage;
+
+	HANDLE consoleHandle;
 
 	void calcCoordsCall(cv::Mat& image);
 

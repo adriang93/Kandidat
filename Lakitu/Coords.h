@@ -23,25 +23,35 @@ public:
 		int highV;
 	};
 
-	Coords(Coords::HSVfilter);
+	Coords(Coords::HSVfilter&);
 	Coords();
 
-	void SetHSV(Coords::HSVfilter);
+	enum modes {
+		COORDS_FILTER = 1,
+		COORDS_CIRCLE = 2
+	};
+
+	void SetHSV(Coords::HSVfilter&);
+	void SetMode(int);
 	bool Ready();
-	bool ValidCoords();
+	int ValidCoords();
+	float GetCorrellation();
 	cv::Mat GetFilteredImage();
+	cv::Mat GetCircledImage();
 	std::pair<int, int> GetCoords();
 	void CalculateCoords(const cv::Mat&);
 	static void DrawCross(int x, int y, cv::Mat&);
 
 private:
-	void SetCoords(int, int);
 	HSVfilter filter;
 	cv::Mat filteredImage;
-	int posX;
-	int posY;
+	cv::Mat circledImage;
+	std::pair<int, int> posFilter;
+	std::pair<int, int> posCircle; 
 	bool ready;
-	bool validCoords;
+	int validCoords;
+	int mode = COORDS_FILTER;
 	std::mutex coordsLock;
-	std::mutex imageLock;
+	std::mutex filteredLock;
+	std::mutex circledLock;
 };
