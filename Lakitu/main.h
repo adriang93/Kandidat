@@ -19,6 +19,7 @@ private:
 	bool cross = false;
 	std::thread calcThread;
 	Coords coords;
+	Compass compass;
 	cv::Mat returnImage;
 
 	void calcCoordsCall(cv::Mat& image);

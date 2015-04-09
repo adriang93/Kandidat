@@ -2,20 +2,27 @@
 #include "Compass.h"
 
 Compass::Compass(const ovrHmd* hmd) : hmd(hmd), unfilteredHeading(0), filteredHeading(0) {
+	Start();
+}
+
+Compass::Compass() : hmd(NULL), unfilteredHeading(0), filteredHeading(0) {
+}
+
+void Compass::Start() {
 	thread = std::thread(&Compass::SensorLoop, this);
 }
 
+void Compass::SetHMD(ovrHmd* h) {
+	hmd = h;
+}
 Compass::~Compass() {
 	this->hmd = NULL;
 	thread.join();
 }
 
 void Compass::SensorLoop() {
-	ovrFrameTiming frameTiming;
 	while (this->hmd) {
-		frameTiming = ovrHmd_BeginFrameTiming(*hmd, 0);
-
-		ovrTrackingState tsState = ovrHmd_GetTrackingState(*hmd, frameTiming.ScanoutMidpointSeconds);
+		ovrTrackingState tsState = ovrHmd_GetTrackingState(*hmd, ovr_GetTimeInSeconds());
 		// The cpp compatibility layer is used to convert ovrPosef to Posef (see OVR_Math.h)
 		OVR::Posef pose = tsState.HeadPose.ThePose;
 		ovrVector3f rotation;
@@ -41,10 +48,7 @@ void Compass::SensorLoop() {
 		}
 		filteredHeading = diff;
 
-		Sleep(5);
-		if (this->hmd) {
-			ovrHmd_EndFrameTiming(*hmd);
-		}
+		Sleep(1000/60);
 	}
 }
 

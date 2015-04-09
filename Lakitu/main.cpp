@@ -18,8 +18,11 @@ WebcamApp::WebcamApp() {
 	//coords = Coords(a, b, c, d, e, f);
 
 	WebcamHandler webcamHandler(g);
-	MessageBox(NULL, (LPCWSTR)L"Hejsan", (LPCWSTR)L"Test", MB_OK);
 
+	if (!AllocConsole()) {
+		FAIL("Could not create console");
+	}
+	freopen("CONOUT$", "w", stdout);
 }
 
 WebcamApp::~WebcamApp() {
@@ -29,7 +32,9 @@ WebcamApp::~WebcamApp() {
 
 void WebcamApp::initGl() {
 	//cv::imshow("Lakitu", cv::imread("Resources/lakitu.png", CV_LOAD_IMAGE_COLOR));
-	Compass compass(&hmd);
+	compass.SetHMD(&hmd);
+	compass.Start();
+
 	RiftApp::initGl();
 	using namespace oglplus;
 	texture = TexturePtr(new Texture());
@@ -54,6 +59,7 @@ void WebcamApp::update() {
 			calcThread = std::thread(&WebcamApp::calcCoordsCall, this, captureData);
 			started = true;
 		}*/
+		std::cout << "Heading: " << compass.FilteredHeading() << std::endl;
 		using namespace oglplus;
 		Context::Bound(TextureTarget::_2D, *texture)
 			.Image2D(0, PixelDataInternalFormat::RGBA8,

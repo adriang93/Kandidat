@@ -16,6 +16,9 @@ private:
 	static void Compass::CorrectForTilt(ovrVector3f&, const ovrVector3f&); 
 public:
 	Compass(const ovrHmd* hmd);
+	Compass();
+	void Start();
+	void SetHMD(ovrHmd * h);
 	~Compass();
 	float Compass::FilteredHeading();
 	float Compass::UnFilteredHeading();
