@@ -67,7 +67,7 @@ void WebcamApp::update() {
 			else {
 				returnImage = coords.GetCircledImage();
 			}
-			cv::flip(returnImage, returnImage, 0);
+			cv::flip(returnImage.clone(), returnImage, 0);
 
 			SetConsoleRow(rows::posRow);
 			std::pair<int, int> pos = coords.GetCoords();
