@@ -1,64 +1,112 @@
-#include "stdafx.h"
+/* 
 
+Huvudmodul för programmet. Mycket av koden kommer från exempel 13.2 från OculusRiftInAction, 
+anpassad för vårt projekt.
+
+TODO: Licens för ovanstående.
+
+*/ 
+
+#include "stdafx.h"
 #include "main.h"
 
-
-
-
+// Wrapperkod för att kunna köra CalculateCoords i en separat tråd.
+// Bör gå att köra kod från externa klasser i egen tråd utan detta. 
+// TODO: Hitta sätt att skippa denna kodsnutt.
 void WebcamApp::calcCoordsCall(cv::Mat& image) {
 	coords.CalculateCoords(image);
 }
 
+// Flytta markören i konsollen till vald rad.
 void WebcamApp::SetConsoleRow(int row) {
 	COORD pos;
 	pos.X = 0;
 	pos.Y = row;
+	
+	// Flytta markören till koordinaterna i pos.
 	SetConsoleCursorPosition(consoleHandle, pos);
 }
 
+// Konstruktorn är ej tagen från exempelkoden.
 WebcamApp::WebcamApp() {
+	// Läs värden från en fil. Vi antar att filen är korrekt formaterad.
+	// Det som läses in är filtervärdena i de första sex talen, och sedan vilket device som 
+	// skall läsas från.
 	std::fstream file("values.txt");
 	int a, b, c, d, e, f, g;
 	file >> a >> b >> c >> d >> e >> f >> g;
+	
+	// Skapa en WebcamHandler med det device som lästs in från filen.
+	StreamHandler webcamHandler(g);
+	// Skapa ett filter med ovanstående värden
 	Coords::HSVfilter filter(a, b, c, d, e, f);
-	WebcamHandler webcamHandler(g);
+
+	// Sätt filtret i instansen av Coords till det vi läst in från filen.
 	coords.SetHSV(filter); 
+	// Sätt rätt beräkningsmode i Coords. Standard är enbart filtrering, ej cirkling.
 	coords.SetMode(coordsMode);
 
+	// Skapa en konsoll (vilket inte görs som stnadard i en Windowsapp.)
 	if (!AllocConsole()) {
+		
+		// FAIL är ett makro från OculusRiftInAction-resurserna. 
 		FAIL("Could not create console");
 	}
+	// Öppna konsollen med magiska värden som gör att det fungerar.
 	freopen("CONOUT$", "w", stdout);
+	
+	//Spara ett handle till konsollen så att vi kan flytta markören senare.
 	consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
 }
 
+// Destruktor. Avslutar startade trådar.
 WebcamApp::~WebcamApp() {
+	// Stoppa bildextraheringen. 
 	captureHandler.StopCapture();
+
+	// Låt beräkningne slutföras.
 	calcThread.join();
 }
 
+// Initiera OpenGL-systemet. Det mesta av jobbet görs i moderklassen. 
 void WebcamApp::initGl() {
+
+	//Avkommentera för att visa en fin bild på Lakitu!
 	//cv::imshow("Lakitu", cv::imread("Resources/lakitu.png", CV_LOAD_IMAGE_COLOR));
 
 	RiftApp::initGl();
+	
+	// När initGl körs har moderklassens kod redna initierat Oculus Rift. hmd pekar därför
+	// på ett OR-objekt nu. Sätt värdet i kompassmodulen till detta, och starta kompassberäkningen.
 	compass.SetHMD(&hmd);
 	compass.Start();
 
+	// Kod från exempel 13.2. Självförklarande tycker jag.
 	using namespace oglplus;
 	texture = TexturePtr(new Texture());
 	Context::Bound(TextureTarget::_2D, *texture)
 		.MagFilter(TextureMagFilter::Linear)
 		.MinFilter(TextureMinFilter::Linear);
 	program = oria::loadProgram(Resource::SHADERS_TEXTURED_VS, Resource::SHADERS_TEXTURED_FS);
-	float aspectRatio = captureHandler.StartCapture();
+	float aspectRatio = captureHandler.StartCapture(); // <- startar bildextrahering
 	videoGeometry = oria::loadPlane(program, aspectRatio);
 }
 
+// Denna kod körs "ofta" av moderklassen.
 void WebcamApp::update() {
 	cv::Mat captureData;
+
+	// Efterföljande kod kommer vara bunden till hur ofta vi kan få en frame från videoenheten.
 	if (captureHandler.GetFrame(captureData)) {
+		
+		// Om bildbehandlingen slutförts vill vi hantera informationen och starta en ny omgång med 
+		// senaste frame.
 		if (coords.Ready()) {
-			if (!displayMode) {
+			
+			// Beroende på värdet på variabeln displayMode visar vi olika bilder.
+			// TODO: Red ut om vi kan effektivisera genom att inte kopiera bilden på 
+			// en massa ställen, till exempel där en kopia returneras av GetFilteredImage.
+			if (displayMode == 0) {
 				returnImage = captureData;
 			}
 			else if (displayMode == 1) {
@@ -67,8 +115,14 @@ void WebcamApp::update() {
 			else {
 				returnImage = coords.GetCircledImage();
 			}
+
+			// Vänd bilden rätt. Den extraheras nämligen upp-och-ner.
 			cv::flip(returnImage.clone(), returnImage, 0);
 
+			// Skriv ut data på rätt rad. Eftersom flera trådar skriver på konsollen behöver vi 
+			// hålla koll på vilken rad som vilken modul skall skriva på. Inte så snyggt, men 
+			// fungerar.
+			// TODO: Elegantare lösning för att skriva ut statusvärden.
 			SetConsoleRow(rows::posRow);
 			std::pair<int, int> pos = coords.GetCoords();
 			std::cout << "pos: " << pos.first << ", " << pos.second;
@@ -77,19 +131,31 @@ void WebcamApp::update() {
 			SetConsoleRow(rows::corrRow);
 			std::cout << "corr: " << coords.GetCorrellation();
 
-			Coords::DrawCross(pos.first, pos.second, returnImage);
-			cv::putText(returnImage, "Test", cv::Point(0, 0), cv::FONT_HERSHEY_PLAIN, 1, cv::Scalar::all(255));
+			if (cross) {
+				Coords::DrawCross(pos.first, pos.second, returnImage);
+			}
+
+			// Visa den returnerade bilden.
 			imshow("Bild", returnImage);
+			
+			// Joina beräkningståden.
 			calcThread.join();
+
+			// Starta ny beräkningståd med senaste frame.
 			calcThread = std::thread(&WebcamApp::calcCoordsCall, this, captureData);
 		}
+
+		// Om Coords inte är ready, men vi inte heller någonsin startat, så starta beräkningen.
 		else if (!started) {
 			calcThread = std::thread(&WebcamApp::calcCoordsCall, this, captureData);
 			started = true;
 		}
 
+		// Skriv ut kompassriktning.
 		SetConsoleRow(rows::headingOVRRow);
 		std::cout << "Heading: " << compass.FilteredHeading();
+
+		// Förklarar sig själv!
 		using namespace oglplus;
 		Context::Bound(TextureTarget::_2D, *texture)
 			.Image2D(0, PixelDataInternalFormat::RGBA8,
@@ -98,21 +164,35 @@ void WebcamApp::update() {
 			captureData.data);
 	}
 }
+
+// Hantera tangenttryckningar.
+// TODO: När man slår på cirkeldetektering kraschar just nu koden av okänd anledning.
 void WebcamApp::onKey(int key, int scancode, int action, int mods) {
 	if (action == GLFW_PRESS) {
 		if (key == GLFW_KEY_C) {
+
+			// Bitwise xor; om COORDS_CIRCLE är satt så avmarkeras den och tvärt om. Togglar
+			// alltså huruvida cirkeldetektering skall utföras.
 			coordsMode ^= Coords::COORDS_CIRCLE;
 		}
 		else if (key == GLFW_KEY_F) {
+
+			// Samma som ovan fast för filtrering.
 			coordsMode ^= Coords::COORDS_FILTER;
 		}
 		else if (key == GLFW_KEY_M) {
+
+			// Rotera genom de olika visningsalternativen för returnerad bild.
 			displayMode++;
 			if (displayMode == 3) {
 				displayMode = 0;
 			}
 		}
+		
+		//Spara värdet för mode.
 		coords.SetMode(coordsMode);
+
+		// Skriv ut aktuell visningsmode, och aktuell beräkningsmode
 		SetConsoleRow(rows::modeRow);
 		std::cout << "Mode: " << displayMode;
 		SetConsoleRow(rows::coordsModeRow);
@@ -121,8 +201,13 @@ void WebcamApp::onKey(int key, int scancode, int action, int mods) {
 	RiftApp::onKey(key, scancode, action, mods);
 }
 
+// Rendera
 void WebcamApp::renderScene() {
+
+	// Helt självklart!
 	using namespace oglplus;
+	
+	// Rensa allt som renderats hittills. Den här delen av kdoen förstår jag! /André
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	MatrixStack & mv = Stacks::modelview();
 	mv.withPush([&] {

@@ -156,21 +156,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="Circle.h" />
     <ClInclude Include="Compass.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="Coords.h" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="WebcamHandler.h" />
+    <ClInclude Include="StreamHandler.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Circle.cpp" />
     <ClCompile Include="Compass.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Coords.cpp" />
-    <ClCompile Include="WebcamHandler.cpp" />
+    <ClCompile Include="StreamHandler.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

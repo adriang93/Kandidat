@@ -7,7 +7,9 @@
 
 #include "targetver.h"
 
+// Används av nästan alla moduler
 #include "opencv2\opencv.hpp"
+
 #include <stdio.h>
 #include <tchar.h>
 

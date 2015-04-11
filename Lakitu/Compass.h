@@ -1,15 +1,27 @@
+/*
+
+Header för Compassmodulen. Innehåller inga värden; bara publika och privata metoder. 
+
+*/
+
+
 #pragma once
 
-#include <OVR_CAPI.h>
-#include <Kernel\OVR_Math.h>
-#include <thread>
+#include <OVR_CAPI.h> // Oculus-SDK:n
+#include <Kernel\OVR_Math.h> // sin och tan
+#include <thread> // std::thread
 #include <windows.h> // For sleep
-#include <vector>
+#include <vector> 
 
 class Compass {
 private:
-	std::thread thread;
+	// Vi behöver hålla reda på tråden som extraherar sensordata
+	std::thread thread; 
+	
+	// Oculus Rift-objektet
 	const ovrHmd* hmd;
+
+	// Två olika sorters kompassriktning; den momentana och den filtrerade
 	float filteredHeading, unfilteredHeading;
 	void SensorLoop();
 	static float Compass::CalculateHeading(const ovrVector3f&);
