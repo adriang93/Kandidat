@@ -116,11 +116,11 @@ void Compass::SensorLoop() {
 	}
 }
 
-float Compass::UnFilteredHeading() {
+float Compass::UnFilteredHeading() const {
 	return unfilteredHeading;
 }
 
-float Compass::FilteredHeading() {
+float Compass::FilteredHeading() const {
 	return filteredHeading;
 }
 

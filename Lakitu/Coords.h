@@ -11,6 +11,7 @@ TODO: Länk till licens för openCV-exemplen.
 #pragma once
 
 #include "stdafx.h"
+#include <limits>
 #include <mutex> // semaforer
 
 class Coords
@@ -39,19 +40,11 @@ public:
 	Coords(Coords::HSVfilter&);
 	Coords();
 
-	// Bitflaggor för de två olika lägena som kan vara aktiverade oberoende av varandra.
-	enum modes {
-		COORDS_FILTER = 1,
-		COORDS_CIRCLE = 2
-	};
-
 	void SetHSV(Coords::HSVfilter&);
 	void SetMode(int);
 	bool Ready();
-	int ValidCoords();
-	float GetCorrellation();
+	bool ValidCoords();
 	cv::Mat GetFilteredImage();
-	cv::Mat GetCircledImage();
 	std::pair<int, int> GetCoords();
 	void CalculateCoords(const cv::Mat&);
 	static void DrawCross(int x, int y, cv::Mat&);
@@ -59,20 +52,15 @@ public:
 private:
 	HSVfilter filter;
 	cv::Mat filteredImage;
-	cv::Mat circledImage;
 	std::pair<int, int> posFilter;
-	std::pair<int, int> posCircle;
-	
+
 	// Anger att bildbehandling genomförts. Sätts till true i slutet av beräkningskoden.
 	bool ready = false;
 	
-	// Anger om vi har lyckats beräkna koordinater. Använder bitvärdena från modes för att ange
-	// kombination av giltiga koordinater för de två olika metoderna.
-	int validCoords = 0;
+	// Anger om vi har lyckats beräkna koordinater.
+	bool validCoords = false;
 
 	// Standardläget är att bara filtrera, inte detektera cirklar.
-	int mode = COORDS_FILTER;
 	std::mutex coordsLock;
 	std::mutex filteredLock;
-	std::mutex circledLock;
 };

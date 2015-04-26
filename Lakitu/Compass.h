@@ -32,7 +32,7 @@ public:
 	void Start();
 	void SetHMD(ovrHmd * h);
 	~Compass();
-	float Compass::FilteredHeading();
-	float Compass::UnFilteredHeading();
+	float Compass::FilteredHeading() const;
+	float Compass::UnFilteredHeading() const;
 };
 

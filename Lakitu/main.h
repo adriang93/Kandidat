@@ -14,6 +14,7 @@ TODO: Länk till licens här.
 #include "Coords.h" 
 #include "Compass.h"
 #include "StreamHandler.h"
+#include "NavigatorComm.h"
 
 // Läsa filer, std::fstream samt std::cout och ::cin
 #include <iostream>
@@ -30,29 +31,16 @@ TODO: Länk till licens här.
 class WebcamApp : public RiftApp {
 private:
 
-	// För att hålla reda på vilken rad varje funktion skall skriva text på i konsollen
-	enum rows {
-		headingOVRRow = 0,
-		headingDroneRow = 1,
-		distanceRow = 2,
-		modeRow = 3,
-		coordsModeRow = 4,
-		posRow = 5,
-		validRow = 6,
-		corrRow = 7
-	};
-
 	// Har vi börjat beräkna position i bilden? 
 	bool started = false;
 
 	// Vill vi rita ett kors för att markera aktuell beräknad position?
 	bool cross = true;
 	
-	// Vilken sorts bild vill vi extrahera; filtrerad, circelberäknad eller originalbild?
+	// Vilken sorts bild vill vi visa; originalbild eller filtrearad bild?
 	int displayMode = 1;
-	
-	// Standardläget är att bildbehandlingsmodulen enbart filtrerar, ej letar cirklar.
-	int coordsMode = Coords::COORDS_FILTER && Coords::COORDS_CIRCLE;
+
+	int missedFramesCount = 0;
 	
 	// Tråden som beräknar position i bilden
 	std::thread calcThread;
@@ -60,6 +48,7 @@ private:
 	Coords coords;
 	Compass compass;
 	StreamHandler captureHandler;
+	NavigatorComm* navigator;
 		
 	cv::Mat returnImage;
 

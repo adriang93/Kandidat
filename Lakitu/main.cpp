@@ -17,7 +17,7 @@ void WebcamApp::calcCoordsCall(cv::Mat& image) {
 	coords.CalculateCoords(image);
 }
 
-// Flytta markören i konsollen till vald rad.
+// Flytta markören i konsollen till vald rad. Används ej.
 void WebcamApp::SetConsoleRow(int row) {
 	COORD pos;
 	pos.X = 0;
@@ -43,12 +43,10 @@ WebcamApp::WebcamApp() {
 
 	// Sätt filtret i instansen av Coords till det vi läst in från filen.
 	coords.SetHSV(filter); 
-	// Sätt rätt beräkningsmode i Coords. Standard är enbart filtrering, ej cirkling.
-	coords.SetMode(coordsMode);
 
 	// Skapa en konsoll (vilket inte görs som stnadard i en Windowsapp.)
 	if (!AllocConsole()) {
-		
+
 		// FAIL är ett makro från OculusRiftInAction-resurserna. 
 		FAIL("Could not create console");
 	}
@@ -61,6 +59,8 @@ WebcamApp::WebcamApp() {
 
 // Destruktor. Avslutar startade trådar.
 WebcamApp::~WebcamApp() {
+	delete navigator;
+
 	// Stoppa bildextraheringen. 
 	captureHandler.StopCapture();
 
@@ -80,6 +80,7 @@ void WebcamApp::initGl() {
 	// på ett OR-objekt nu. Sätt värdet i kompassmodulen till detta, och starta kompassberäkningen.
 	compass.SetHMD(&hmd);
 	compass.Start();
+	navigator = new NavigatorComm(compass);
 
 	// Kod från exempel 13.2. Självförklarande tycker jag.
 	using namespace oglplus;
@@ -114,30 +115,26 @@ void WebcamApp::update() {
 			else if (displayMode == 1) {
 				returnImage = coords.GetFilteredImage();
 			}
-			/*else {
-				returnImage = coords.GetCircledImage();
-			}*/
-
 			std::pair<int, int> pos = coords.GetCoords();
 
-			if (cross) {
-				Coords::DrawCross(pos.first, pos.second, returnImage);
+			navigator->SetCoords(pos, coords.ValidCoords());
+
+			if (coords.ValidCoords()) {
+				if (cross) {
+					Coords::DrawCross(pos.first, pos.second, returnImage);
+				}
+				missedFramesCount = 0;
+			}
+			else {
+				missedFramesCount++;
+				if (missedFramesCount >= 15) {
+					navigator->Land(); // tappar bort användaren i en halv sekund
+					//TODO: Indikera detta för användaren och gör fler saker
+				}
 			}
 
 			// Vänd bilden rätt. Den extraheras nämligen upp-och-ner.
 			cv::flip(returnImage.clone(), returnImage, 0);
-
-			// Skriv ut data på rätt rad. Eftersom flera trådar skriver på konsollen behöver vi 
-			// hålla koll på vilken rad som vilken modul skall skriva på. Inte så snyggt, men 
-			// fungerar.
-			// TODO: Elegantare lösning för att skriva ut statusvärden.
-			SetConsoleRow(rows::posRow);
-
-			std::cout << "pos: " << pos.first << ", " << pos.second;
-			SetConsoleRow(rows::validRow);
-			std::cout << "valid: " << coords.ValidCoords();
-			SetConsoleRow(rows::corrRow);
-			std::cout << "corr: " << coords.GetCorrellation();
 
 			// Visa den returnerade bilden.
 			imshow("Bild", returnImage);
@@ -151,10 +148,6 @@ void WebcamApp::update() {
 			started = true;
 			calcThread = std::thread(&WebcamApp::calcCoordsCall, this, captureData);
 		}
-
-		// Skriv ut kompassriktning.
-		SetConsoleRow(rows::headingOVRRow);
-		std::cout << "Heading: " << compass.FilteredHeading();
 
 		// Förklarar sig själv!
 		using namespace oglplus;
@@ -170,31 +163,12 @@ void WebcamApp::update() {
 // TODO: När man slår på cirkeldetektering kraschar just nu koden av okänd anledning.
 void WebcamApp::onKey(int key, int scancode, int action, int mods) {
 	if (action == GLFW_PRESS) {
-		if (key == GLFW_KEY_C) {
-
-			// Bitwise xor; om COORDS_CIRCLE är satt så avmarkeras den och tvärt om. Togglar
-			// alltså huruvida cirkeldetektering skall utföras.
-			coordsMode ^= Coords::COORDS_CIRCLE;
-		}
-		else if (key == GLFW_KEY_F) {
-
-			// Samma som ovan fast för filtrering.
-			coordsMode ^= Coords::COORDS_FILTER;
-		}
-		else if (key == GLFW_KEY_M) {
-
-			// Rotera genom de olika visningsalternativen för returnerad bild.
+		if (key == GLFW_KEY_M) {
 			displayMode = !displayMode;
 		}
-		
-		//Spara värdet för mode.
-		coords.SetMode(coordsMode);
-
-		// Skriv ut aktuell visningsmode, och aktuell beräkningsmode
-		SetConsoleRow(rows::modeRow);
-		std::cout << "Mode: " << displayMode;
-		SetConsoleRow(rows::coordsModeRow);
-		std::cout << "coordsMode: " << coordsMode;
+		else if (key == GLFW_KEY_ESCAPE) {
+			navigator->Land();
+		}
 	}
 	RiftApp::onKey(key, scancode, action, mods);
 }
