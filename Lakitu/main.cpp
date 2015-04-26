@@ -33,11 +33,18 @@ WebcamApp::WebcamApp() {
 	// Det som läses in är filtervärdena i de första sex talen, och sedan vilket device som 
 	// skall läsas från.
 	std::fstream file("values.txt");
-	int a, b, c, d, e, f, g;
+	int a, b, c, d, e, f;
+	std::string g;
 	file >> a >> b >> c >> d >> e >> f >> g;
+	//Skapa en WebcamHandler med det device som lästs in från filen.
+	try {
+		int h = std::stoi(g);
+		captureHandler.SetDevice(h);
+	}
+	catch (...) {
+		captureHandler.SetFile(g);
+	}
 	
-	// Skapa en WebcamHandler med det device som lästs in från filen.
-	StreamHandler webcamHandler(g);
 	// Skapa ett filter med ovanstående värden
 	Coords::HSVfilter filter(a, b, c, d, e, f);
 

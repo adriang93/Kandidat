@@ -18,6 +18,8 @@ TODO: Länk till licens här.
 
 // Läsa filer, std::fstream samt std::cout och ::cin
 #include <iostream>
+#include <cctype>
+#include <string>
 
 // Från OculusRiftInAction
 #include "Resources.h"

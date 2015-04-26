@@ -8,16 +8,28 @@ TODO: Licens för ovanstående.
 #include "stdafx.h"
 #include "StreamHandler.h"
 
-// Initera med ett bestämd devicenummer
-StreamHandler::StreamHandler(int device) : device(device) {
-}
-
 // Standarddevice är noll.
 StreamHandler::StreamHandler() {}
 
+void StreamHandler::SetDevice(int dev)
+{
+	device = dev;
+}
+
+void StreamHandler::SetFile(std::string filename)
+{
+	file = filename;
+	useFile = true;
+}
+
 // Spawn capture thread and return webcam aspect ratio (width over height)
 float StreamHandler::StartCapture() {
-	videoCapture.open("gul.mp4");
+	if (useFile) {
+		videoCapture.open(file);
+	}
+	else {
+		videoCapture.open(device);
+	}
 	if (!videoCapture.isOpened()
 		|| !videoCapture.read(frame)) {
 		FAIL("Could not open video source to capture first frame");
@@ -57,6 +69,6 @@ void StreamHandler::CaptureLoop() {
 		videoCapture.read(captured);
 		cv::flip(captured.clone(), captured, 0);
 		SetFrame(captured);
-		Sleep(1000/30);
+		//Sleep(1000/30);
 	}
 }
