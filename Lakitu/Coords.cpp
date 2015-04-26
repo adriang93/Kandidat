@@ -148,52 +148,99 @@ void Coords::CalculateCoords(const cv::Mat& imgOriginal) {
 	if (mode & COORDS_FILTER)
 	{
 		cv::Mat imgHSV;
+		cv::Mat imgHSV2;
 
 		// Nedanstående kod fårn OpenCV-exempel. Alla engelska kommentarer är tagna från 
 		// exempelkoden.
 
 		cvtColor(imgOriginal, imgHSV, COLOR_BGR2HSV); //Convert the captured frame from BGR to HSV
+		imgHSV2 = imgHSV.clone();
 		inRange(imgHSV, Scalar(filter.lowH, filter.lowS, filter.lowV),
 			Scalar(filter.highH, filter.highS, filter.highV), imgHSV); //Threshold the image
 
+		inRange(imgHSV2, Scalar(0, 0, 245),
+			Scalar(255, 255, 255), imgHSV2); //Threshold the image
+
+		imgHSV = imgHSV + imgHSV2;
+
 		//morphological opening (removes small objects from the foreground)
-		erode(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(2, 2)));
-		dilate(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(2, 2)));
+		erode(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
+		dilate(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
 
 		//morphological closing (removes small holes from the foreground)
-		dilate(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(2, 2)));
-		erode(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(2, 2)));
+		dilate(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
+		erode(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
 
-		//Denna kod är numera inte användbar utan bör istället skapas i den anropande klassen.
+		//http://stackoverflow.com/questions/8076889/tutorial-on-opencv-simpleblobdetector
+
+		cv::SimpleBlobDetector::Params params;
+		params.minDistBetweenBlobs = 50.0f;
+		params.filterByInertia = false;
+		params.filterByConvexity = false;
+		params.filterByColor = false;
+		params.filterByCircularity = true;
+		params.filterByArea = true;
+		params.minCircularity = 0.65;
+		//params.maxCircularity = ;
+		params.minArea = 60;
+		params.maxArea = 1200;
+
+
+		SimpleBlobDetector detector(params);
+		std::vector<KeyPoint> keypoints;
+		
+		detector.detect(imgHSV, keypoints);
+		
+		Mat im_with_keypoints;
+		
+		drawKeypoints(imgHSV, keypoints, im_with_keypoints, Scalar(0, 0, 255), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+
 
 		//Calculate the moments of the thresholded image
-		Moments oMoments = moments(imgHSV);
-		double dM01 = oMoments.m01;
-		double dM10 = oMoments.m10;
-		double dArea = oMoments.m00;
+		//Moments oMoments = moments(imgHSV);
+		//double dM01 = oMoments.m01;
+		//double dM10 = oMoments.m10;
+		//double dArea = oMoments.m00;
 
 		// Lås koordinaterna med tidigare skapad semafor. 
 		coordsGuard.lock();
 		
 		// if the area <= 10000, I consider that the there are no object in the image and it's because of the noise, the area is not zero 
-		if (dArea > 10000)
+		int mindist = 1000000;
+		int dist = 0;
+		int disty = 0; 
+		int distx = 0;
+		int newposx, newposy;
+		int size = keypoints.size();
+		if (size > 0)
 		{
-			// calculate the position of the object
-			posFilter.first = static_cast<int>(dM10 / dArea + 0.5);
-			posFilter.second = static_cast<int>(dM01 / dArea + 0.5);
-
+			
+			for (int i = 0; i < size; i++) {
+				int kx = keypoints[i].pt.x;
+				int ky = keypoints[i].pt.y;
+				disty = posFilter.first - kx;
+				distx = posFilter.second - ky;
+				dist = sqrt((disty*disty) + (distx*distx));
+				if (dist < mindist) {
+					mindist = dist;
+					newposx = keypoints[i].pt.x;// static_cast<int>(dM10 / dArea + 0.5);
+					newposy = keypoints[i].pt.y; // static_cast<int>(dM01 / dArea + 0.5);
+				}
+			}
 			// Eftersom vi lyckades beräkna koordinaterna så sätter vi flaggan.
 			validCoords |= COORDS_FILTER;
+			posFilter.first = newposx;
+			posFilter.second = newposy;
 		}
 		coordsGuard.unlock();
 
 		//Lås bilden när vi sparar kopian för att förhindra att man läser en halvskriven bild
 		std::unique_lock<std::mutex> filterGuard(filteredLock);
-		filteredImage = imgHSV;
+		filteredImage = im_with_keypoints;
 		filterGuard.unlock();
 	}
-
-	// Skall vi beräkna position med cirkelmetod?
+	/*
+	// Skall vi beräkna position med cirkelmetod? Används ej!
 	if (mode & COORDS_CIRCLE) {
 		
 		// Nedanstående kod från OpenCV-exempel. Kommentarer på engelska är från exempelkoden.
@@ -209,7 +256,7 @@ void Coords::CalculateCoords(const cv::Mat& imgOriginal) {
 		vector<Vec3f> circles;
 
 		// Apply the Hough Transform to find the circles
-		HoughCircles(src_gray, circles, CV_HOUGH_GRADIENT, 1, src_gray.rows / 8, 100, 50, 0, 23);
+		HoughCircles(src_gray, circles, CV_HOUGH_GRADIENT, 1, src_gray.rows / 8, 200, 100, 0, 23);
 
 		cv::Mat imgCircles = src_gray;
 
@@ -248,7 +295,7 @@ void Coords::CalculateCoords(const cv::Mat& imgOriginal) {
 		// Lås cirkelbilden så att inte halvfärdig bild kan läsas med GetCircledImage.
 		std::lock_guard<std::mutex> guard(circledLock);
 		circledImage = imgCircles;
-	}
+	}*/
 	ready = true;
 }
 

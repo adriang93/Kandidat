@@ -49,7 +49,7 @@ private:
 	bool cross = true;
 	
 	// Vilken sorts bild vill vi extrahera; filtrerad, circelberäknad eller originalbild?
-	int displayMode = 0;
+	int displayMode = 1;
 	
 	// Standardläget är att bildbehandlingsmodulen enbart filtrerar, ej letar cirklar.
 	int coordsMode = Coords::COORDS_FILTER && Coords::COORDS_CIRCLE;

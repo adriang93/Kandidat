@@ -114,8 +114,14 @@ void WebcamApp::update() {
 			else if (displayMode == 1) {
 				returnImage = coords.GetFilteredImage();
 			}
-			else {
+			/*else {
 				returnImage = coords.GetCircledImage();
+			}*/
+
+			std::pair<int, int> pos = coords.GetCoords();
+
+			if (cross) {
+				Coords::DrawCross(pos.first, pos.second, returnImage);
 			}
 
 			// Vänd bilden rätt. Den extraheras nämligen upp-och-ner.
@@ -126,16 +132,12 @@ void WebcamApp::update() {
 			// fungerar.
 			// TODO: Elegantare lösning för att skriva ut statusvärden.
 			SetConsoleRow(rows::posRow);
-			std::pair<int, int> pos = coords.GetCoords();
+
 			std::cout << "pos: " << pos.first << ", " << pos.second;
 			SetConsoleRow(rows::validRow);
 			std::cout << "valid: " << coords.ValidCoords();
 			SetConsoleRow(rows::corrRow);
 			std::cout << "corr: " << coords.GetCorrellation();
-
-			if (cross) {
-				Coords::DrawCross(pos.first, pos.second, returnImage);
-			}
 
 			// Visa den returnerade bilden.
 			imshow("Bild", returnImage);
@@ -182,10 +184,7 @@ void WebcamApp::onKey(int key, int scancode, int action, int mods) {
 		else if (key == GLFW_KEY_M) {
 
 			// Rotera genom de olika visningsalternativen för returnerad bild.
-			displayMode++;
-			if (displayMode == 3) {
-				displayMode = 0;
-			}
+			displayMode = !displayMode;
 		}
 		
 		//Spara värdet för mode.
