@@ -17,7 +17,7 @@ StreamHandler::StreamHandler() {}
 
 // Spawn capture thread and return webcam aspect ratio (width over height)
 float StreamHandler::StartCapture() {
-	videoCapture.open(device);
+	videoCapture.open("gul.mp4");
 	if (!videoCapture.isOpened()
 		|| !videoCapture.read(frame)) {
 		FAIL("Could not open video source to capture first frame");
@@ -57,5 +57,6 @@ void StreamHandler::CaptureLoop() {
 		videoCapture.read(captured);
 		cv::flip(captured.clone(), captured, 0);
 		SetFrame(captured);
+		Sleep(1000);
 	}
 }

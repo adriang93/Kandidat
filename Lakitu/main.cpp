@@ -98,16 +98,18 @@ void WebcamApp::update() {
 
 	// Efterföljande kod kommer vara bunden till hur ofta vi kan få en frame från videoenheten.
 	if (captureHandler.GetFrame(captureData)) {
-		
+
 		// Om bildbehandlingen slutförts vill vi hantera informationen och starta en ny omgång med 
 		// senaste frame.
 		if (coords.Ready()) {
-			
+
+			calcThread.join();
+
 			// Beroende på värdet på variabeln displayMode visar vi olika bilder.
 			// TODO: Red ut om vi kan effektivisera genom att inte kopiera bilden på 
 			// en massa ställen, till exempel där en kopia returneras av GetFilteredImage.
 			if (displayMode == 0) {
-				returnImage = captureData;
+				returnImage = captureData.clone();
 			}
 			else if (displayMode == 1) {
 				returnImage = coords.GetFilteredImage();
@@ -138,17 +140,14 @@ void WebcamApp::update() {
 			// Visa den returnerade bilden.
 			imshow("Bild", returnImage);
 			
-			// Joina beräkningståden.
-			calcThread.join();
-
 			// Starta ny beräkningståd med senaste frame.
 			calcThread = std::thread(&WebcamApp::calcCoordsCall, this, captureData);
 		}
 
 		// Om Coords inte är ready, men vi inte heller någonsin startat, så starta beräkningen.
 		else if (!started) {
-			calcThread = std::thread(&WebcamApp::calcCoordsCall, this, captureData);
 			started = true;
+			calcThread = std::thread(&WebcamApp::calcCoordsCall, this, captureData);
 		}
 
 		// Skriv ut kompassriktning.

@@ -46,13 +46,13 @@ private:
 	bool started = false;
 
 	// Vill vi rita ett kors för att markera aktuell beräknad position?
-	bool cross = false;
+	bool cross = true;
 	
 	// Vilken sorts bild vill vi extrahera; filtrerad, circelberäknad eller originalbild?
 	int displayMode = 0;
 	
 	// Standardläget är att bildbehandlingsmodulen enbart filtrerar, ej letar cirklar.
-	int coordsMode = Coords::COORDS_FILTER;
+	int coordsMode = Coords::COORDS_FILTER && Coords::COORDS_CIRCLE;
 	
 	// Tråden som beräknar position i bilden
 	std::thread calcThread;

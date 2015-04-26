@@ -157,12 +157,12 @@ void Coords::CalculateCoords(const cv::Mat& imgOriginal) {
 			Scalar(filter.highH, filter.highS, filter.highV), imgHSV); //Threshold the image
 
 		//morphological opening (removes small objects from the foreground)
-		erode(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
-		dilate(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
+		erode(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(2, 2)));
+		dilate(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(2, 2)));
 
 		//morphological closing (removes small holes from the foreground)
-		dilate(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
-		erode(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
+		dilate(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(2, 2)));
+		erode(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(2, 2)));
 
 		//Denna kod är numera inte användbar utan bör istället skapas i den anropande klassen.
 
@@ -204,14 +204,14 @@ void Coords::CalculateCoords(const cv::Mat& imgOriginal) {
 		cvtColor(imgOriginal, src_gray, CV_BGR2GRAY);
 
 		// Reduce the noise so we avoid false circle detection
-		GaussianBlur(src_gray, src_gray, Size(9, 9), 2, 2);
+		GaussianBlur(src_gray, src_gray, Size(1, 1), 0, 0);
 
 		vector<Vec3f> circles;
 
 		// Apply the Hough Transform to find the circles
-		HoughCircles(src_gray, circles, CV_HOUGH_GRADIENT, 1, src_gray.rows / 8, 120, 60, 5, 0);
+		HoughCircles(src_gray, circles, CV_HOUGH_GRADIENT, 1, src_gray.rows / 8, 100, 50, 0, 23);
 
-		cv::Mat imgCircles = imgOriginal;
+		cv::Mat imgCircles = src_gray;
 
 		// Håll reda på vilken cirkel som är störst och spara koordinaterna för den.
 		// TODO: Störst cirkel behöver inte vara rätt cirkel. Hitta metod för att istället
