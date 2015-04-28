@@ -17,16 +17,6 @@ void WebcamApp::calcCoordsCall(cv::Mat& image) {
 	coords.CalculateCoords(image);
 }
 
-// Flytta markören i konsollen till vald rad. Används ej.
-void WebcamApp::SetConsoleRow(int row) {
-	COORD pos;
-	pos.X = 0;
-	pos.Y = row;
-	
-	// Flytta markören till koordinaterna i pos.
-	SetConsoleCursorPosition(consoleHandle, pos);
-}
-
 // Konstruktorn är ej tagen från exempelkoden.
 WebcamApp::WebcamApp() {
 	// Läs värden från en fil. Vi antar att filen är korrekt formaterad.
@@ -35,11 +25,11 @@ WebcamApp::WebcamApp() {
 	std::fstream file("values.txt");
 	int a, b, c, d, e, f;
 	std::string g;
-	file >> a >> b >> c >> d >> e >> f >> g;
+	file >> a >> b >> c >> d >> e >> f >> g >> port;
 	//Skapa en WebcamHandler med det device som lästs in från filen.
 	try {
-		int h = std::stoi(g);
-		captureHandler.SetDevice(h);
+		int i = std::stoi(g);
+		captureHandler.SetDevice(i);
 	}
 	catch (...) {
 		captureHandler.SetFile(g);
@@ -52,16 +42,15 @@ WebcamApp::WebcamApp() {
 	coords.SetHSV(filter); 
 
 	// Skapa en konsoll (vilket inte görs som stnadard i en Windowsapp.)
-	if (!AllocConsole()) {
+//	if (!AllocConsole()) {
 
 		// FAIL är ett makro från OculusRiftInAction-resurserna. 
-		FAIL("Could not create console");
-	}
+//		FAIL("Could not create console");
+//	}
 	// Öppna konsollen med magiska värden som gör att det fungerar.
-	freopen("CONOUT$", "w", stdout);
+//	freopen("CONOUT$", "w", stdout);
 	
 	//Spara ett handle till konsollen så att vi kan flytta markören senare.
-	consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
 }
 
 // Destruktor. Avslutar startade trådar.
@@ -87,7 +76,7 @@ void WebcamApp::initGl() {
 	// på ett OR-objekt nu. Sätt värdet i kompassmodulen till detta, och starta kompassberäkningen.
 	compass.SetHMD(&hmd);
 	compass.Start();
-	navigator = new NavigatorComm(compass);
+	navigator = new NavigatorComm(compass, port);
 
 	// Kod från exempel 13.2. Självförklarande tycker jag.
 	using namespace oglplus;
@@ -175,6 +164,12 @@ void WebcamApp::onKey(int key, int scancode, int action, int mods) {
 		}
 		else if (key == GLFW_KEY_ESCAPE) {
 			navigator->Land();
+		}
+		else if (key == GLFW_KEY_S) {
+			navigator->Stop();
+		}
+		else if (key == GLFW_KEY_8) {
+			navigator->PrintLine("Hejsanhoppsan!");
 		}
 	}
 	RiftApp::onKey(key, scancode, action, mods);

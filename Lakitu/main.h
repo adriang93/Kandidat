@@ -11,9 +11,9 @@ TODO: Länk till licens här.
 #include "stdafx.h"
 
 // Våra lokala klasser 
+#include "StreamHandler.h"
 #include "Coords.h" 
 #include "Compass.h"
-#include "StreamHandler.h"
 #include "NavigatorComm.h"
 
 // Läsa filer, std::fstream samt std::cout och ::cin
@@ -43,6 +43,9 @@ private:
 	int displayMode = 1;
 
 	int missedFramesCount = 0;
+
+	// Portnummer för koimmunikation med Mission Planner-scriptet
+	int port;
 	
 	// Tråden som beräknar position i bilden
 	std::thread calcThread;
@@ -53,9 +56,6 @@ private:
 	NavigatorComm* navigator;
 		
 	cv::Mat returnImage;
-
-	// Behövs för att kunna flytta markören i konsollen för att skriva på valfri rad
-	HANDLE consoleHandle;
 
 	void calcCoordsCall(cv::Mat& image);
 	void SetConsoleRow(int);
