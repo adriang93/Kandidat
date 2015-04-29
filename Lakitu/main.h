@@ -32,7 +32,6 @@ TODO: Länk till licens här.
 
 class WebcamApp : public RiftApp {
 private:
-
 	// Har vi börjat beräkna position i bilden? 
 	bool started = false;
 
@@ -73,7 +72,7 @@ private:
 	Coords::HSVfilter filter;
 
 public:
-
+	GLboolean glewExperimental;
 	// Dessa kallas av moderklassen och är ärvda metoder från 
 	// RiftApp från OculusRiftInAction-resurserna
 	WebcamApp();

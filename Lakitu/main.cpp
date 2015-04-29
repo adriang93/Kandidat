@@ -18,7 +18,7 @@ void WebcamApp::calcCoordsCall(cv::Mat& image) {
 }
 
 // Konstruktorn är ej tagen från exempelkoden.
-WebcamApp::WebcamApp() {
+WebcamApp::WebcamApp() : glewExperimental(GL_TRUE) {
 	// Läs värden från en fil. Vi antar att filen är korrekt formaterad.
 	// Det som läses in är filtervärdena i de första sex talen, och sedan vilket device som 
 	// skall läsas från.
