@@ -47,7 +47,7 @@ public:
 	bool ValidCoords();
 	cv::Mat GetFilteredImage();
 	std::pair<int, int> GetCoords();
-	void CalculateCoords(const cv::Mat& image, int minArea, int maxArea, int minCircularity);
+	void CalculateCoords(const cv::Mat& image, int minArea, int maxArea, int minCircularity, int open, int close);
 	static void DrawCross(int x, int y, cv::Mat& image);
 
 private:

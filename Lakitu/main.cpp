@@ -14,7 +14,7 @@ TODO: Licens för ovanstående.
 // Bör gå att köra kod från externa klasser i egen tråd utan detta. 
 // TODO: Hitta sätt att skippa denna kodsnutt.
 void WebcamApp::calcCoordsCall(cv::Mat& image) {
-	coords.CalculateCoords(image, minArea, maxArea, minCircularity);
+	coords.CalculateCoords(image, minArea, maxArea, minCircularity, open, close);
 }
 
 // Konstruktorn är ej tagen från exempelkoden.
@@ -95,6 +95,8 @@ void WebcamApp::initGl() {
 	cv::createTrackbar("minArea", "Trackbars", &minArea, 150);
 	cv::createTrackbar("maxArea", "Trackbars", &maxArea, 2000);
 	cv::createTrackbar("minCircularity", "Trackbars", &minCircularity, 100);
+	cv::createTrackbar("opening", "Trackbars", &open, 15);
+	cv::createTrackbar("close", "Trackbars", &close, 15);
 }
 
 // Denna kod körs "ofta" av moderklassen.

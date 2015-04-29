@@ -71,7 +71,7 @@ std::pair<int, int> Coords::GetCoords() {
 
 // Beräkna koordinater genom att filtrera bilden
 void Coords::CalculateCoords(const cv::Mat& imgOriginal,
-	int minArea, int maxArea, int minCircularity) {
+	int minArea, int maxArea, int minCircularity, int open, int close) {
 
 	// Gör koden mycket renare då nästan varje rad använder cv-metoder
 	using namespace cv;
@@ -100,14 +100,15 @@ void Coords::CalculateCoords(const cv::Mat& imgOriginal,
 		Scalar(255, 255, 255), imgHSV2); //Hitta nästan-vita pixlar
 
 	imgHSV += imgHSV2; //addera för att möjliggöra detektion även vid överexponering
-
+	open = max(open, 1);
+	close = max(close, 1);
 	//morphological opening (removes small objects from the foreground)
-	erode(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
-	dilate(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
+	erode(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(open, open)));
+	dilate(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(open, open)));
 
 	//morphological closing (removes small holes from the foreground)
-	dilate(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
-	erode(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
+	dilate(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(close, close)));
+	erode(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(close, close)));
 
 	//Från: http://stackoverflow.com/questions/8076889/tutorial-on-opencv-simpleblobdetector
 

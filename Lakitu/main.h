@@ -47,6 +47,8 @@ private:
 	int minArea;
 	int maxArea;
 	int minCircularity;
+	int open = 2;
+	int close = 5;
 
 	// Portnummer för koimmunikation med Mission Planner-scriptet
 	int port;
