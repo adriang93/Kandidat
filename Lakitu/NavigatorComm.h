@@ -8,11 +8,11 @@
 
 class NavigatorComm {
 public:
-	NavigatorComm(Compass &, int);
+	NavigatorComm(Compass & compass, int port);
 	~NavigatorComm();
-	void SetHeading(int);
-	void SetCoords(std::pair<int, int>, bool);
-	void PrintLine(std::string);
+	void SetHeading(int heading);
+	void SetCoords(std::pair<int, int> coords, bool valid);
+	void PrintLine(std::string text);
 	void Land();
 	void Stop();
 private:

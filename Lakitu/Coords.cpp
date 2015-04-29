@@ -58,7 +58,7 @@ std::pair<int, int> Coords::GetCoords() {
 
 	// Lås koordinaterna under beräkning
 	std::lock_guard<std::mutex> guard(coordsLock);
-	
+
 	if (validCoords) {
 		return posFilter;
 	}
@@ -70,7 +70,8 @@ std::pair<int, int> Coords::GetCoords() {
 }
 
 // Beräkna koordinater genom att filtrera bilden
-void Coords::CalculateCoords(const cv::Mat& imgOriginal) {
+void Coords::CalculateCoords(const cv::Mat& imgOriginal,
+	int minArea, int maxArea, int minCircularity) {
 
 	// Gör koden mycket renare då nästan varje rad använder cv-metoder
 	using namespace cv;
@@ -114,12 +115,13 @@ void Coords::CalculateCoords(const cv::Mat& imgOriginal) {
 	params.minDistBetweenBlobs = 100;
 	params.filterByInertia = false;
 	params.filterByConvexity = false;
-	params.filterByColor = false;
+	params.filterByColor = true;
 	params.filterByCircularity = true;
 	params.filterByArea = true;
-	params.minCircularity = 0.70;
-	params.minArea = 60;
-	params.maxArea = 1200;
+	params.blobColor = 255;
+	params.minCircularity = ((float)minCircularity) / (100.0);
+	params.minArea = max(minArea, 1);
+	params.maxArea = max(maxArea, 1);
 
 	SimpleBlobDetector blobDetector(params);
 	std::vector<KeyPoint> keypoints;

@@ -14,7 +14,7 @@ TODO: Licens för ovanstående.
 // Bör gå att köra kod från externa klasser i egen tråd utan detta. 
 // TODO: Hitta sätt att skippa denna kodsnutt.
 void WebcamApp::calcCoordsCall(cv::Mat& image) {
-	coords.CalculateCoords(image);
+	coords.CalculateCoords(image, minArea, maxArea, minCircularity);
 }
 
 // Konstruktorn är ej tagen från exempelkoden.
@@ -23,21 +23,19 @@ WebcamApp::WebcamApp() {
 	// Det som läses in är filtervärdena i de första sex talen, och sedan vilket device som 
 	// skall läsas från.
 	std::fstream file("values.txt");
-	int a, b, c, d, e, f;
-	std::string g;
-	file >> a >> b >> c >> d >> e >> f >> g >> port;
+	std::string filedevice;
+	file >> filter.lowH >> filter.highH >> filter.lowS >> filter.highS 
+		>> filter.lowV >> filter.highV >> filedevice >> port 
+		>> minArea >> maxArea >> minCircularity;
 	//Skapa en WebcamHandler med det device som lästs in från filen.
 	try {
-		int i = std::stoi(g);
-		captureHandler.SetDevice(i);
+		int device = std::stoi(filedevice);
+		captureHandler.SetDevice(device);
 	}
 	catch (...) {
-		captureHandler.SetFile(g);
+		captureHandler.SetFile(filedevice);
 	}
 	
-	// Skapa ett filter med ovanstående värden
-	Coords::HSVfilter filter(a, b, c, d, e, f);
-
 	// Sätt filtret i instansen av Coords till det vi läst in från filen.
 	coords.SetHSV(filter); 
 
@@ -87,6 +85,16 @@ void WebcamApp::initGl() {
 	program = oria::loadProgram(Resource::SHADERS_TEXTURED_VS, Resource::SHADERS_TEXTURED_FS);
 	float aspectRatio = captureHandler.StartCapture(); // <- startar bildextrahering
 	videoGeometry = oria::loadPlane(program, aspectRatio);
+	cv::namedWindow("Trackbars");
+	cv::createTrackbar("HueLow", "Trackbars", &(filter.lowH),179);
+	cv::createTrackbar("HueHigh", "Trackbars", &(filter.highH), 179);
+	cv::createTrackbar("SatLow", "Trackbars", &(filter.lowS), 255);
+	cv::createTrackbar("SatHigh", "Trackbars", &(filter.highS), 255);
+	cv::createTrackbar("ValLow", "Trackbars", &(filter.lowV), 255);
+	cv::createTrackbar("ValHigh", "Trackbars", &(filter.highV), 255);
+	cv::createTrackbar("minArea", "Trackbars", &minArea, 150);
+	cv::createTrackbar("maxArea", "Trackbars", &maxArea, 2000);
+	cv::createTrackbar("minCircularity", "Trackbars", &minCircularity, 100);
 }
 
 // Denna kod körs "ofta" av moderklassen.
@@ -99,6 +107,8 @@ void WebcamApp::update() {
 		// Om bildbehandlingen slutförts vill vi hantera informationen och starta en ny omgång med 
 		// senaste frame.
 		if (coords.Ready()) {
+
+			coords.SetHSV(filter);
 
 			calcThread.join();
 
@@ -123,7 +133,7 @@ void WebcamApp::update() {
 			}
 			else {
 				missedFramesCount++;
-				if (missedFramesCount >= 15) {
+				if (missedFramesCount >= 10) {
 					navigator->Land(); // tappar bort användaren i en halv sekund
 					//TODO: Indikera detta för användaren och gör fler saker
 				}
@@ -133,7 +143,7 @@ void WebcamApp::update() {
 			cv::flip(returnImage.clone(), returnImage, 0);
 
 			// Visa den returnerade bilden.
-			imshow("Bild", returnImage);
+			imshow("Image", returnImage);
 			
 			// Starta ny beräkningståd med senaste frame.
 			calcThread = std::thread(&WebcamApp::calcCoordsCall, this, captureData);

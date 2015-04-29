@@ -44,6 +44,10 @@ private:
 
 	int missedFramesCount = 0;
 
+	int minArea;
+	int maxArea;
+	int minCircularity;
+
 	// Portnummer för koimmunikation med Mission Planner-scriptet
 	int port;
 	
@@ -64,6 +68,7 @@ private:
 	TexturePtr texture;
 	ProgramPtr program;
 	ShapeWrapperPtr videoGeometry;
+	Coords::HSVfilter filter;
 
 public:
 

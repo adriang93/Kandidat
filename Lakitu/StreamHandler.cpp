@@ -69,6 +69,6 @@ void StreamHandler::CaptureLoop() {
 		videoCapture.read(captured);
 		cv::flip(captured.clone(), captured, 0);
 		SetFrame(captured);
-		//Sleep(1000/30);
+		Sleep(1000/30);
 	}
 }

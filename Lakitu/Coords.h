@@ -12,6 +12,7 @@ TODO: Länk till licens för openCV-exemplen.
 
 #include "stdafx.h"
 #include <limits>
+#include <math.h>
 #include <mutex> // semaforer
 
 class Coords
@@ -37,17 +38,17 @@ public:
 		int highV;
 	};
 
-	Coords(Coords::HSVfilter&);
+	Coords(Coords::HSVfilter& filter);
 	Coords();
 
-	void SetHSV(Coords::HSVfilter&);
+	void SetHSV(Coords::HSVfilter& filter);
 	void SetMode(int);
 	bool Ready();
 	bool ValidCoords();
 	cv::Mat GetFilteredImage();
 	std::pair<int, int> GetCoords();
-	void CalculateCoords(const cv::Mat&);
-	static void DrawCross(int x, int y, cv::Mat&);
+	void CalculateCoords(const cv::Mat& image, int minArea, int maxArea, int minCircularity);
+	static void DrawCross(int x, int y, cv::Mat& image);
 
 private:
 	HSVfilter filter;

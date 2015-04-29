@@ -61,7 +61,6 @@ void NavigatorComm::OutputLoop()
 		
 		std::string message = "START";
 		boost::asio::write(socket, boost::asio::buffer(message), error);
-		Sleep(2000);
 		while (true) {
 			if (error == boost::asio::error::eof) {
 				FAIL("Mission Planner stopped responding!");
@@ -93,6 +92,6 @@ void NavigatorComm::OutputLoop()
 		} 
 	}
 	catch (...) {
-		FAIL("Could not connect to Mission Planner script");
+		// FAIL("Could not connect to Mission Planner script");
 	}
 }
