@@ -9,8 +9,9 @@
 class NavigatorComm {
 public:
 	NavigatorComm(Compass & compass, int port);
+	void connectMP();
 	~NavigatorComm();
-	void SetHeading(int heading);
+	void SetHeading(float newHeading);
 	void SetCoords(std::pair<int, int> coords, bool valid);
 	void PrintLine(std::string text);
 	void Land();
@@ -27,5 +28,6 @@ private:
 	bool waitingMessage;
 	bool stopped = false;
 	bool validCoords = false;
+	bool connected;
 	void OutputLoop();
 };

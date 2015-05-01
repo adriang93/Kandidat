@@ -2,11 +2,21 @@
 #include "NavigatorComm.h"
 
 NavigatorComm::NavigatorComm(Compass &compass, int port) : compassModule(compass),
-port(port), waitingMessage(false), newMessage("")
+port(port), waitingMessage(false), newMessage(""), connected(false)
 {
-	outputThread = std::thread(&NavigatorComm::OutputLoop, this);
 	coords.first = 0;
 	coords.second = 0;
+	connectMP();
+}
+
+void NavigatorComm::connectMP() {
+	if (!connected) {
+		if (outputThread.joinable()) {
+			outputThread.join();
+		}
+		outputThread = std::thread(&NavigatorComm::OutputLoop, this);
+		stopped = false;
+	}
 }
 
 NavigatorComm::~NavigatorComm()
@@ -15,7 +25,7 @@ NavigatorComm::~NavigatorComm()
 	outputThread.join();
 }
 
-void NavigatorComm::SetHeading(int newHeading)
+void NavigatorComm::SetHeading(float newHeading)
 {
 	heading = newHeading;
 }
@@ -30,14 +40,12 @@ void NavigatorComm::Land() {
 	std::lock_guard<std::mutex> guard(waitingLock);
 	waitingMessage = true;
 	newMessage = "LAND";
-	stopped = true;
 }
 
 void NavigatorComm::Stop() {
 	std::lock_guard<std::mutex> guard(waitingLock);
 	waitingMessage = true;
 	newMessage = "STOP";
-	stopped = true;
 }
 
 void NavigatorComm::PrintLine(std::string text)
@@ -50,48 +58,53 @@ void NavigatorComm::PrintLine(std::string text)
 void NavigatorComm::OutputLoop()
 {
 	using boost::asio::ip::tcp;
-	try {
-		boost::asio::io_service ioService;
-		tcp::resolver::query query("localhost", std::to_string(port));
-		tcp::resolver resolver(ioService);
-		tcp::resolver::iterator iterator = resolver.resolve(query);
-		tcp::socket socket(ioService);
-		boost::asio::connect(socket, iterator);
-		boost::system::error_code error;
-		
-		std::string message = "START";
-		boost::asio::write(socket, boost::asio::buffer(message), error);
-		while (true) {
-			if (error == boost::asio::error::eof) {
-				FAIL("Mission Planner stopped responding!");
-			}
-			if (waitingMessage) {
-				std::unique_lock<std::mutex> guard(waitingLock);
-				message = newMessage;
-				waitingMessage = false;
-				guard.unlock();
-			}
-			else
-			{
-				std::unique_lock<std::mutex> guard(outputLock);
-				heading = compassModule.FilteredHeading();
-				message = std::to_string(heading) + "," + std::to_string(coords.first)
-					+ "," + std::to_string(coords.second) + "," + std::to_string(validCoords);
-				guard.unlock();
-			}
-			if (stopped) { // nya meddelandet kommer alltid innehålla STOP eller LAND om vi är här.
-				boost::asio::write(socket, boost::asio::buffer(newMessage), error);
-				socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, error);
-				socket.close();
-				break;
-			}
-			else {
+	while (true) {
+		try {
+			boost::asio::io_service ioService;
+			tcp::resolver::query query("localhost", std::to_string(port));
+			tcp::resolver resolver(ioService);
+			tcp::resolver::iterator iterator = resolver.resolve(query);
+			tcp::socket socket(ioService);
+			boost::asio::connect(socket, iterator);
+			connected = true;
+			std::string message = "START\n";
+			boost::asio::write(socket, boost::asio::buffer(message));
+			while (true) {
+				boost::system::error_code error;
+				if (stopped) {
+					socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, error);
+					socket.close();
+					break;
+				}
+				if (waitingMessage) {
+					std::unique_lock<std::mutex> guard(waitingLock);
+					message = newMessage;
+					waitingMessage = false;
+					guard.unlock();
+				}
+				else
+				{
+					std::unique_lock<std::mutex> guard(outputLock);
+					heading = compassModule.FilteredHeading();
+					message = std::to_string(heading) + "," + std::to_string(coords.first)
+						+ "," + std::to_string(coords.second) + "," + std::to_string(validCoords);
+					guard.unlock();
+				}
 				boost::asio::write(socket, boost::asio::buffer(message), error);
+				if ((error == boost::asio::error::eof) || (error == boost::asio::error::connection_reset) || (error == boost::asio::error::connection_aborted)) {
+					connected = false;
+					break;
+				}
+				Sleep(1000 / 10);
 			}
-			Sleep(1000 / 10);
-		} 
-	}
-	catch (...) {
-		// FAIL("Could not connect to Mission Planner script");
+		}
+		catch (...) {
+			connected = false;
+			// FAIL("Could not connect to Mission Planner script");
+		}
+		if (stopped) {
+			break;
+		}
+		Sleep(1000);
 	}
 }

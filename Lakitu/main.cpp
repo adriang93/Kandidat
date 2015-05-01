@@ -131,14 +131,6 @@ void WebcamApp::update() {
 				if (cross) {
 					Coords::DrawCross(pos.first, pos.second, returnImage);
 				}
-				missedFramesCount = 0;
-			}
-			else {
-				missedFramesCount++;
-				if (missedFramesCount >= 10) {
-					navigator->Land(); // tappar bort användaren i en halv sekund
-					//TODO: Indikera detta för användaren och gör fler saker
-				}
 			}
 
 			// Vänd bilden rätt. Den extraheras nämligen upp-och-ner.
@@ -180,8 +172,8 @@ void WebcamApp::onKey(int key, int scancode, int action, int mods) {
 		else if (key == GLFW_KEY_S) {
 			navigator->Stop();
 		}
-		else if (key == GLFW_KEY_8) {
-			navigator->PrintLine("Hejsanhoppsan!");
+		else if (key == GLFW_KEY_N) {
+			navigator->connectMP();
 		}
 	}
 	RiftApp::onKey(key, scancode, action, mods);

@@ -41,8 +41,6 @@ private:
 	// Vilken sorts bild vill vi visa; originalbild eller filtrearad bild?
 	int displayMode = 1;
 
-	int missedFramesCount = 0;
-
 	int minArea;
 	int maxArea;
 	int minCircularity;
