@@ -71,7 +71,8 @@ std::pair<int, int> Coords::GetCoords() {
 
 // Beräkna koordinater genom att filtrera bilden
 void Coords::CalculateCoords(const cv::Mat& imgOriginal,
-	int minArea, int maxArea, int minCircularity, int open, int close) {
+	int minArea, int maxArea, int minCircularity, 
+	int open, int close) {
 
 	// Gör koden mycket renare då nästan varje rad använder cv-metoder
 	using namespace cv;
@@ -85,9 +86,10 @@ void Coords::CalculateCoords(const cv::Mat& imgOriginal,
 
 	// Skapa en semafor för koordinater, men lås den inte (std::defer_lock).
 	std::unique_lock<std::mutex> coordsGuard(coordsLock, std::defer_lock);
-	// Nedanstående kod fårn OpenCV-exempel. Alla engelska kommentarer är tagna från 
-	// exempelkoden.
-
+	
+	// Nedanstående kod delvis anpassad från OpenCV:s egna exempel från opencv.org.
+	// Engelska kommentarer är från exempelkod från opencv.org.
+	
 	Mat imgHSV;
 	cvtColor(imgOriginal, imgHSV, COLOR_BGR2HSV); //Convert the captured frame from BGR to HSV
 
@@ -95,22 +97,25 @@ void Coords::CalculateCoords(const cv::Mat& imgOriginal,
 
 	inRange(imgHSV, Scalar(filter.lowH, filter.lowS, filter.lowV),
 		Scalar(filter.highH, filter.highS, filter.highV), imgHSV); //Threshold the image
-
-	inRange(imgHSV2, Scalar(0, 0, 245),
-		Scalar(255, 255, 255), imgHSV2); //Hitta nästan-vita pixlar
+																   
+		//Hitta nästan-vita pixlar för att kunna detektera överexponerade objekt	
+	inRange(imgHSV2, Scalar(0, 0, 245),	Scalar(255, 255, 255), imgHSV2); 
 
 	imgHSV += imgHSV2; //addera för att möjliggöra detektion även vid överexponering
-	open = max(open, 1);
-	close = max(close, 1);
-	//morphological opening (removes small objects from the foreground)
-	erode(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(open, open)));
-	dilate(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(open, open)));
 
-	//morphological closing (removes small holes from the foreground)
-	dilate(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(close, close)));
-	erode(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(close, close)));
-
-	//Från: http://stackoverflow.com/questions/8076889/tutorial-on-opencv-simpleblobdetector
+	if (open) {
+		// Morfologisk öppning. Se opencv-dokumentation på 
+		// http://docs.opencv.org/doc/tutorials/imgproc/erosion_dilatation/erosion_dilatation.html
+		erode(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(open, open)));
+		dilate(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(open, open)));
+	}
+	if (close) {
+		// Morfologisk stängning, se föregående länk. 
+		dilate(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(close, close)));
+		erode(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(close, close)));
+	}
+	// Anpassat från: 
+	// http://stackoverflow.com/questions/8076889/tutorial-on-opencv-simpleblobdetector
 
 	cv::SimpleBlobDetector::Params params;
 	params.minDistBetweenBlobs = 100;
@@ -165,7 +170,8 @@ void Coords::CalculateCoords(const cv::Mat& imgOriginal,
 }
 
 // Rita ett kors. Anpassad från OpenCV-exempel och gjord statisk då den
-// inte kräver någon instantiering.
+// inte kräver någon instantiering. Justerad för att inte använda fula
+// if/else-satser
 void Coords::DrawCross(int x, int y, Mat& image) {
 
 	using namespace cv;
@@ -175,18 +181,15 @@ void Coords::DrawCross(int x, int y, Mat& image) {
 	//UPDATE:JUNE 18TH, 2013
 	//added 'if' and 'else' statements to prevent
 	//memory errors from writing off the screen (ie. (-25,-25) is not within the window!)
-	Scalar scalar = Scalar(0, 255, 0);
-	circle(image, Point(x, y), 10, scalar, 2);
-	if (y - 10 > 0)
-		line(image, Point(x, y), Point(x, y - 10), scalar, 2);
-	else line(image, Point(x, y), Point(x, 0), scalar, 2);
-	if (y + 10 < image.rows)
-		line(image, Point(x, y), Point(x, y + 10), scalar, 2);
-	else line(image, Point(x, y), Point(x, image.rows), scalar, 2);
-	if (x - 10 > 0)
-		line(image, Point(x, y), Point(x - 10, y), scalar, 2);
-	else line(image, Point(x, y), Point(0, y), scalar, 2);
-	if (x + 10 < image.cols)
-		line(image, Point(x, y), Point(x + 10, y), scalar, 2);
-	else line(image, Point(x, y), Point(image.cols, y), scalar, 2);
+	//Modifierad 2015-05-09 med max och min för att undvika if/else vilka gjorde koden
+	//mer otydlig
+
+	// Färg på korset
+	Scalar color = Scalar(0, 255, 0);
+	
+	//circle(image, Point(x, y), 10, scalar, 2);
+	line(image, Point(x, y), Point(x, max(y - 10,0)), color, 2);
+	line(image, Point(x, y), Point(x, min(y + 10, image.rows)), color, 2);
+	line(image, Point(x, y), Point(max(x - 10, 0), y), color, 2);
+	line(image, Point(x, y), Point(min(x + 10, image.cols), y), color, 2);
 }

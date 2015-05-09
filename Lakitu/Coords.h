@@ -42,7 +42,6 @@ public:
 	Coords();
 
 	void SetHSV(Coords::HSVfilter& filter);
-	void SetMode(int);
 	bool Ready();
 	bool ValidCoords();
 	cv::Mat GetFilteredImage();

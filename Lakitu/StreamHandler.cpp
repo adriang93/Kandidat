@@ -70,7 +70,9 @@ void StreamHandler::CaptureLoop() {
 		cv::flip(captured.clone(), captured, 0);
 		SetFrame(captured);
 		if (useFile) {
-			Sleep(1000 / 30);
+			//antar 30 fps. Inte kritiskt värde då uppspelning från fil enbart
+			//görs för testning
+			Sleep(1000 / 30); 
 		}
 	}
 }

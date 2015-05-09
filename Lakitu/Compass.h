@@ -23,15 +23,19 @@ private:
 
 	// Två olika sorters kompassriktning; den momentana och den filtrerade
 	float filteredHeading, unfilteredHeading;
+	int smoothing;
 	void SensorLoop();
 	static float Compass::CalculateHeading(const ovrVector3f&);
 	static void Compass::CorrectForTilt(ovrVector3f&, const ovrVector3f&); 
 public:
 	Compass(const ovrHmd* hmd);
 	Compass();
+	~Compass();
+
 	void Start();
 	void SetHMD(ovrHmd * h);
-	~Compass();
+	void SetSmoothing(int newSmoothing);
+
 	float Compass::FilteredHeading() const;
 	float Compass::UnFilteredHeading() const;
 };

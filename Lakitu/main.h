@@ -41,11 +41,15 @@ private:
 	// Vilken sorts bild vill vi visa; originalbild eller filtrearad bild?
 	int displayMode = 1;
 
+	// parametrar för objektdetekteringen
 	int minArea;
 	int maxArea;
 	int minCircularity;
-	int open = 2;
-	int close = 5;
+	int open;
+	int close;
+
+	// parameter för kompassfiltreringen
+	int smoothing; 
 
 	// Portnummer för koimmunikation med Mission Planner-scriptet
 	int port;

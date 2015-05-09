@@ -10,8 +10,6 @@ TODO: Länk till licens.
 
 */
 
-
-
 #include "stdafx.h"
 #include "Compass.h"
 
@@ -31,6 +29,9 @@ void Compass::SetHMD(ovrHmd* h) {
 	hmd = h;
 }
 
+void Compass::SetSmoothing(int newSmoothing) {
+	smoothing = min(max(newSmoothing, 100), 0);
+}
 
 // Starta kompassextraheringen i en separat tråd. Spara referensen till tråden i variabeln thread.
 // Observera: kontrollerar inte om hmd existerar. Det gör istället sensorlooptråden.
@@ -84,7 +85,7 @@ void Compass::SensorLoop() {
 		// filteredHeading kommer att vara förra beräkningsloopens värden (alltså värdet för t-1)
 		// så första raden beräknar hur mycket beräknade kompassriktningen ändrats sedan förra
 		// loopgenomkörningen.
-		float diff = unfilteredHeading - filteredHeading; 
+		float diff = unfilteredHeading - filteredHeading;
 
 		// Om nuvarande värde är 359 grader och förra värdet var 2 grader kommer skillnaden vara 
 		// väldigt stor, 357 grader. Egentligen är ju dock skillnaden bara 3 grader. Vi behöver därför
@@ -100,7 +101,11 @@ void Compass::SensorLoop() {
 		// Hur snabb förändring som tillåts blir en funktion av tidskonstanten och samplingshastigheten, 
 		// så en mindre tidskonstan kräver högre samplingshastighet för att tillåta snabba förändringar
 		// i kompassriktning.
-		diff = filteredHeading + (0.1f * diff);
+
+		float smooth = smoothing / 100;
+
+		// Lågpassfilter där utjämningsfaktorn är smooth.
+		diff = (1 - smooth) * filteredHeading + (smooth * diff);
 
 		// Justera tillbaka om värdet återigne slagit runt nollan.
 		if (diff > 360) {
@@ -112,7 +117,7 @@ void Compass::SensorLoop() {
 		filteredHeading = diff;
 
 		// Hur många gånger per sekund skall kompassen uppdateras?
-		Sleep(1000 / 100);
+		Sleep(1);
 	}
 }
 
@@ -158,7 +163,7 @@ void Compass::CorrectForTilt(ovrVector3f& magSensor, const ovrVector3f& rotation
 	// förväg. 
 	float cosVal = cos(rotation.z);
 	float sinVal = sin(rotation.z);
-	
+
 	// Kompensera x-axeln baserat på lutningen av y-axeln (vertikalaxeln). Enkel trigonometri.
 	// Kompensera även y-axeln för att användas för beräkningarna av z-axeln senare.
 	corr.x = magSensor.x * cosVal - magSensor.y * sinVal;

@@ -26,7 +26,7 @@ WebcamApp::WebcamApp() : glewExperimental(GL_TRUE) {
 	std::string filedevice;
 	file >> filter.lowH >> filter.highH >> filter.lowS >> filter.highS 
 		>> filter.lowV >> filter.highV >> filedevice >> port 
-		>> minArea >> maxArea >> minCircularity;
+		>> minArea >> maxArea >> minCircularity >> open >> close >> smoothing;
 	//Skapa en WebcamHandler med det device som lästs in från filen.
 	try {
 		int device = std::stoi(filedevice);
@@ -70,7 +70,7 @@ void WebcamApp::initGl() {
 
 	RiftApp::initGl();
 	
-	// När initGl körs har moderklassens kod redna initierat Oculus Rift. hmd pekar därför
+	// När initGl körs har moderklassens kod redan initierat Oculus Rift. hmd pekar därför
 	// på ett OR-objekt nu. Sätt värdet i kompassmodulen till detta, och starta kompassberäkningen.
 	compass.SetHMD(&hmd);
 	compass.Start();
@@ -85,7 +85,9 @@ void WebcamApp::initGl() {
 	program = oria::loadProgram(Resource::SHADERS_TEXTURED_VS, Resource::SHADERS_TEXTURED_FS);
 	float aspectRatio = captureHandler.StartCapture(); // <- startar bildextrahering
 	videoGeometry = oria::loadPlane(program, aspectRatio);
-	cv::namedWindow("Trackbars", CV_WINDOW_NORMAL);
+
+	// Skapa skjutreglage för alla parametervärden.
+	cv::namedWindow("Trackbars", CV_WINDOW_AUTOSIZE);
 	cv::createTrackbar("HueLow", "Trackbars", &(filter.lowH),179);
 	cv::createTrackbar("HueHigh", "Trackbars", &(filter.highH), 179);
 	cv::createTrackbar("SatLow", "Trackbars", &(filter.lowS), 255);
@@ -97,6 +99,7 @@ void WebcamApp::initGl() {
 	cv::createTrackbar("minCircularity", "Trackbars", &minCircularity, 100);
 	cv::createTrackbar("opening", "Trackbars", &open, 15);
 	cv::createTrackbar("close", "Trackbars", &close, 15);
+	cv::createTrackbar("smoothing", "Trackbars", &smoothing, 100);
 }
 
 // Denna kod körs "ofta" av moderklassen.
@@ -108,6 +111,7 @@ void WebcamApp::update() {
 
 		// Om bildbehandlingen slutförts vill vi hantera informationen och starta en ny omgång med 
 		// senaste frame.
+		compass.SetSmoothing(smoothing);
 		if (coords.Ready()) {
 
 			coords.SetHSV(filter);
