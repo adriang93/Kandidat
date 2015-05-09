@@ -49,6 +49,7 @@ private:
 
 	// Portnummer för koimmunikation med Mission Planner-scriptet
 	int port;
+	std::string host;
 	
 	// Tråden som beräknar position i bilden
 	std::thread calcThread;

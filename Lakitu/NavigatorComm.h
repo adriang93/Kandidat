@@ -9,7 +9,6 @@
 class NavigatorComm {
 public:
 	NavigatorComm(Compass & compass, int port);
-	void connectMP();
 	~NavigatorComm();
 	void SetHeading(float newHeading);
 	void SetCoords(std::pair<int, int> coords, bool valid);

@@ -6,17 +6,7 @@ port(port), waitingMessage(false), newMessage(""), connected(false)
 {
 	coords.first = 0;
 	coords.second = 0;
-	connectMP();
-}
-
-void NavigatorComm::connectMP() {
-	if (!connected) {
-		if (outputThread.joinable()) {
-			outputThread.join();
-		}
-		outputThread = std::thread(&NavigatorComm::OutputLoop, this);
-		stopped = false;
-	}
+	outputThread = std::thread(&NavigatorComm::OutputLoop, this);
 }
 
 NavigatorComm::~NavigatorComm()
@@ -67,12 +57,13 @@ void NavigatorComm::OutputLoop()
 			tcp::socket socket(ioService);
 			boost::asio::connect(socket, iterator);
 			connected = true;
-			std::string message = "START\n";
-			boost::asio::write(socket, boost::asio::buffer(message));
+			boost::asio::write(socket, boost::asio::buffer("START"));
 			while (true) {
 				boost::system::error_code error;
-				if (stopped) {
-					socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, error);
+				std::string message;
+				if (stopped) { //sätts i destruktorn; innebär att programmet avslutas
+					boost::asio::write(socket, boost::asio::buffer("LAND"));
+					socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
 					socket.close();
 					break;
 				}

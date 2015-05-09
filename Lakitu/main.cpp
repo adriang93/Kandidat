@@ -85,7 +85,7 @@ void WebcamApp::initGl() {
 	program = oria::loadProgram(Resource::SHADERS_TEXTURED_VS, Resource::SHADERS_TEXTURED_FS);
 	float aspectRatio = captureHandler.StartCapture(); // <- startar bildextrahering
 	videoGeometry = oria::loadPlane(program, aspectRatio);
-	cv::namedWindow("Trackbars");
+	cv::namedWindow("Trackbars", CV_WINDOW_NORMAL);
 	cv::createTrackbar("HueLow", "Trackbars", &(filter.lowH),179);
 	cv::createTrackbar("HueHigh", "Trackbars", &(filter.highH), 179);
 	cv::createTrackbar("SatLow", "Trackbars", &(filter.lowS), 255);
@@ -166,14 +166,14 @@ void WebcamApp::onKey(int key, int scancode, int action, int mods) {
 		if (key == GLFW_KEY_M) {
 			displayMode = !displayMode;
 		}
-		else if (key == GLFW_KEY_ESCAPE) {
+		else if (key == GLFW_KEY_L) {
 			navigator->Land();
 		}
 		else if (key == GLFW_KEY_S) {
 			navigator->Stop();
 		}
-		else if (key == GLFW_KEY_N) {
-			navigator->connectMP();
+		else if (key == GLFW_KEY_R) {
+			navigator->PrintLine("RESET");
 		}
 	}
 	RiftApp::onKey(key, scancode, action, mods);

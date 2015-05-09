@@ -30,10 +30,10 @@
     <ClInclude Include="Compass.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="resource.h">
+    <ClInclude Include="StreamHandler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="StreamHandler.h">
+    <ClInclude Include="NavigatorComm.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -53,15 +53,8 @@
     <ClCompile Include="StreamHandler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="Lakitu.rc">
-      <Filter>Resource Files</Filter>
-    </ResourceCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="Resources\lakitu.png">
-      <Filter>Resource Files</Filter>
-    </Image>
+    <ClCompile Include="NavigatorComm.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
