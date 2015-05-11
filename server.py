@@ -7,6 +7,8 @@ resolutionX = 720
 resolutionY = 480
 
 centerTolerance = resolutionX*0.05
+heightTolerance = resolutionY*0.05
+heightTolerancePercentage = 10 
 
 maxRoll = 2000
 minRoll = 1200
@@ -77,6 +79,16 @@ def regulateHeading(oculusHeading):
                 print "turn right: " + str(headingDiff/180)
 		percentage = 100*((180-headingDiff)/180)
 		turnRight(percentage)
+
+def regulateHeight(coordY):
+	percentage = coordY*100/resolutionY
+
+	if coordY > (percentage + heightTolerancePercentage):
+		throttle(percentage)
+
+	elif coordX < (percentage - heightTolerancePercentage):
+		throttle(percentage)
+
 
 
 def moveForward(percentage): # low ->slow, high -> fast
