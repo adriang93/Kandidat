@@ -29,8 +29,11 @@ void Compass::SetHMD(ovrHmd* h) {
 	hmd = h;
 }
 
-void Compass::SetSmoothing(int newSmoothing) {
-	smoothing = min(max(newSmoothing, 100), 0);
+// beräkna utjämningsfaktor från brytfrekvensen som anges. 
+// Uppdateringshastigheten är nära 1000 Hz vilket ger deltaT ~= 0.001
+void Compass::SetSmoothing(int cutoffFreq) {
+	float L = 2 * MATH_FLOAT_PI * 0.001 * cutoffFreq;
+	smoothing = (L) / (L + 1);
 }
 
 // Starta kompassextraheringen i en separat tråd. Spara referensen till tråden i variabeln thread.
@@ -51,6 +54,18 @@ Compass::~Compass() {
 // från OR, kompenserar för lutning samt beräknar magnetisk norr. Filtrerar även 
 // resultatet.
 void Compass::SensorLoop() {
+
+	// Om det finns en fil som heter compass.txt skriver vi kompassvärdne till den.
+	// För testning.
+	std::fstream file("compass.txt");
+	bool write;
+	if (file.good()) {
+		write = true;
+	}
+	else {
+		write = false;
+	}
+
 	// Vi måste ha ett hmd-objekt.
 	while (this->hmd) {
 
@@ -81,10 +96,12 @@ void Compass::SensorLoop() {
 
 		// Filtrera headingen med en tidskonstant så att brus och supersnabba rörelser som ändrar
 		// accelerometervärdena (och därmed upplevda rotationen) inte påverkar kompassriktningen
-		// för mycket.
+		// för mycket. Anpassat från http://cache.freescale.com/files/sensors/doc/app_note/AN4248.pdf
+
 		// filteredHeading kommer att vara förra beräkningsloopens värden (alltså värdet för t-1)
 		// så första raden beräknar hur mycket beräknade kompassriktningen ändrats sedan förra
 		// loopgenomkörningen.
+
 		float diff = unfilteredHeading - filteredHeading;
 
 		// Om nuvarande värde är 359 grader och förra värdet var 2 grader kommer skillnaden vara 
@@ -97,15 +114,9 @@ void Compass::SensorLoop() {
 			diff -= 360;
 		}
 
-		// Filtrera med tidskonstanten. Godtyckligt vald till 0.1, men går att välja andra värden. 
-		// Hur snabb förändring som tillåts blir en funktion av tidskonstanten och samplingshastigheten, 
-		// så en mindre tidskonstan kräver högre samplingshastighet för att tillåta snabba förändringar
-		// i kompassriktning.
-
-		float smooth = smoothing / 100;
-
-		// Lågpassfilter där utjämningsfaktorn är smooth.
-		diff = (1 - smooth) * filteredHeading + (smooth * diff);
+		// Filtrera med tidskonstanten. Brytfrekvensen sätts av kallande klass med SetCutoff.
+		// Lågpassfilter där utjämningsfaktorn är smoothing.
+		diff += smoothing * diff;
 
 		// Justera tillbaka om värdet återigne slagit runt nollan.
 		if (diff > 360) {
@@ -115,6 +126,11 @@ void Compass::SensorLoop() {
 			diff += 360;
 		}
 		filteredHeading = diff;
+
+		// Skriv testvärden till fil om compass.txt ligger i samma mapp som programmet
+		if (write) {
+			file << std::to_string(filteredHeading) << ", " << std::to_string(unfilteredHeading) << "\n";
+		}
 
 		// Hur många gånger per sekund skall kompassen uppdateras?
 		Sleep(1);

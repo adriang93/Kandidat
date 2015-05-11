@@ -11,6 +11,9 @@ Header för Compassmodulen. Innehåller inga värden; bara publika och privata meto
 #include <Kernel\OVR_Math.h> // sin och tan
 #include <thread> // std::thread
 #include <windows.h> // For sleep
+#include <iostream> // för att spara kompassvärden
+#include <fstream>
+#include <string>
 #include <vector> 
 
 class Compass {
@@ -23,7 +26,7 @@ private:
 
 	// Två olika sorters kompassriktning; den momentana och den filtrerade
 	float filteredHeading, unfilteredHeading;
-	int smoothing;
+	float smoothing;
 	void SensorLoop();
 	static float Compass::CalculateHeading(const ovrVector3f&);
 	static void Compass::CorrectForTilt(ovrVector3f&, const ovrVector3f&); 
@@ -34,7 +37,7 @@ public:
 
 	void Start();
 	void SetHMD(ovrHmd * h);
-	void SetSmoothing(int newSmoothing);
+	void SetSmoothing(int cutoffFreq);
 
 	float Compass::FilteredHeading() const;
 	float Compass::UnFilteredHeading() const;

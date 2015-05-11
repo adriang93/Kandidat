@@ -19,47 +19,51 @@ class Coords
 {
 public:
 
-	// Publik klass för att skicka och ta emot filtervärden för HSV-filtreringen.
-	// Tomma konstruktorn ger defaultvärden. Alla interna variablar är publika för
-	// att man skall kunna komma åt dem direkt utan set/get för enklare kod.
-	class HSVfilter {
+	// Publik klass för att skicka och ta emot parametervärden för filtreringen.
+	// Alla interna variablar är publika för att man skall kunna komma åt dem 
+	// direkt utan set/get för enklare kod.
+	class CoordsFilter {
 	public:
-		HSVfilter(int lowH, int highH, int lowS, int highS, int lowV, int highV) :
-			lowH(lowH), highH(highH), lowS(lowS), highS(highS), lowV(lowV), highV(highV) {
-		}
-		HSVfilter() {
-			HSVfilter(0, 0, 0, 0, 0, 0);
-		}
+		CoordsFilter() {}
 		int lowH;
 		int highH;
 		int lowS;
 		int highS;
 		int lowV;
 		int highV;
+		int minArea;
+		int maxArea;
+		int minCircularity;
+		int open;
+		int close;
 	};
 
-	Coords(Coords::HSVfilter& filter);
+	// Hjälpklass för att representera en koordinat, och huruvida den är giltig.
+	class Coord {
+	public:
+		Coord() {}
+		float x = 0;
+		float y = 0;
+		float size = 0;
+		bool valid = false;
+	};
+
 	Coords();
 
-	void SetHSV(Coords::HSVfilter& filter);
 	bool Ready();
-	bool ValidCoords();
 	cv::Mat GetFilteredImage();
-	std::pair<int, int> GetCoords();
-	void CalculateCoords(const cv::Mat& image, int minArea, int maxArea, int minCircularity, int open, int close);
+	Coord GetCoords();
+	
+	void CalculateCoords(const cv::Mat& image, CoordsFilter params, bool interlaced);
 	static void DrawCross(int x, int y, cv::Mat& image);
 
 private:
-	HSVfilter filter;
 	cv::Mat filteredImage;
-	std::pair<int, int> posFilter;
+	Coord coord;
 
 	// Anger att bildbehandling genomförts. Sätts till true i slutet av beräkningskoden.
 	bool ready = false;
 	
-	// Anger om vi har lyckats beräkna koordinater.
-	bool validCoords = false;
-
 	// Standardläget är att bara filtrera, inte detektera cirklar.
 	std::mutex coordsLock;
 	std::mutex filteredLock;

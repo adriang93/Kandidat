@@ -1,11 +1,11 @@
-/* 
+/*
 
-Huvudmodul för programmet. Mycket av koden kommer från exempel 13.2 från OculusRiftInAction, 
+Huvudmodul för programmet. Mycket av koden kommer från exempel 13.2 från OculusRiftInAction,
 anpassad för vårt projekt.
 
 TODO: Licens för ovanstående.
 
-*/ 
+*/
 
 #include "stdafx.h"
 #include "main.h"
@@ -14,41 +14,46 @@ TODO: Licens för ovanstående.
 // Bör gå att köra kod från externa klasser i egen tråd utan detta. 
 // TODO: Hitta sätt att skippa denna kodsnutt.
 void WebcamApp::calcCoordsCall(cv::Mat& image) {
-	coords.CalculateCoords(image, minArea, maxArea, minCircularity, open, close);
+	coords.CalculateCoords(image, filter, interlaced);
 }
 
 // Konstruktorn är ej tagen från exempelkoden.
-WebcamApp::WebcamApp() : glewExperimental(GL_TRUE) {
+WebcamApp::WebcamApp() {
+
 	// Läs värden från en fil. Vi antar att filen är korrekt formaterad.
 	// Det som läses in är filtervärdena i de första sex talen, och sedan vilket device som 
 	// skall läsas från.
 	std::fstream file("values.txt");
 	std::string filedevice;
-	file >> filter.lowH >> filter.highH >> filter.lowS >> filter.highS 
-		>> filter.lowV >> filter.highV >> filedevice >> port 
-		>> minArea >> maxArea >> minCircularity >> open >> close >> smoothing;
+	file >> filter.lowH >> filter.highH >> filter.lowS >> filter.highS
+		>> filter.lowV >> filter.highV >> filedevice >> port
+		>> filter.minArea >> filter.maxArea >> filter.minCircularity
+		>> filter.open >> filter.close >> objSize >> horisontalFov
+		>> smoothing >> interlaced >> console;
 	//Skapa en WebcamHandler med det device som lästs in från filen.
 	try {
 		int device = std::stoi(filedevice);
 		captureHandler.SetDevice(device);
 	}
+	// Om vi inte kan konvertera till int tolkar vi värdet som ett filnamn
 	catch (...) {
 		captureHandler.SetFile(filedevice);
 	}
-	
-	// Sätt filtret i instansen av Coords till det vi läst in från filen.
-	coords.SetHSV(filter); 
 
-	// Skapa en konsoll (vilket inte görs som stnadard i en Windowsapp.)
-//	if (!AllocConsole()) {
+	// Skapa en konsoll om detta valts (vilket inte görs som stnadard i en Windowsapp.)
+	if (console) {
+		if (!AllocConsole()) {
 
-		// FAIL är ett makro från OculusRiftInAction-resurserna. 
-//		FAIL("Could not create console");
-//	}
-	// Öppna konsollen med magiska värden som gör att det fungerar.
-//	freopen("CONOUT$", "w", stdout);
-	
-	//Spara ett handle till konsollen så att vi kan flytta markören senare.
+			// FAIL är ett makro från OculusRiftInAction-resurserna. 
+			FAIL("Could not create console");
+		}
+		// Öppna konsollen med magiska värden som gör att det fungerar.
+		// från http://stackoverflow.com/questions/9020790/using-stdin-with-an-allocconsole
+		freopen("CONOUT$", "w", stdout);
+		//Spara ett handle till konsollen så att vi kan flytta markören senare.
+		consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+	}
+	std::cout << std::to_string(horisontalFov);
 }
 
 // Destruktor. Avslutar startade trådar.
@@ -69,7 +74,7 @@ void WebcamApp::initGl() {
 	//cv::imshow("Lakitu", cv::imread("Resources/lakitu.png", CV_LOAD_IMAGE_COLOR));
 
 	RiftApp::initGl();
-	
+
 	// När initGl körs har moderklassens kod redan initierat Oculus Rift. hmd pekar därför
 	// på ett OR-objekt nu. Sätt värdet i kompassmodulen till detta, och starta kompassberäkningen.
 	compass.SetHMD(&hmd);
@@ -86,23 +91,27 @@ void WebcamApp::initGl() {
 	float aspectRatio = captureHandler.StartCapture(); // <- startar bildextrahering
 	videoGeometry = oria::loadPlane(program, aspectRatio);
 
-	// Skapa skjutreglage för alla parametervärden.
+	// Justeringar för olika programfunktioner
 	cv::namedWindow("Trackbars", CV_WINDOW_AUTOSIZE);
-	cv::createTrackbar("HueLow", "Trackbars", &(filter.lowH),179);
+	// Skapa skjutreglage för alla parametervärden för objektdetekteringen. 
+	// Skapa dem med referenser till filterparametrarna så vi inte behöver uppdatera
+	// filtret manuellt
+	cv::createTrackbar("HueLow", "Trackbars", &(filter.lowH), 179);
 	cv::createTrackbar("HueHigh", "Trackbars", &(filter.highH), 179);
 	cv::createTrackbar("SatLow", "Trackbars", &(filter.lowS), 255);
 	cv::createTrackbar("SatHigh", "Trackbars", &(filter.highS), 255);
 	cv::createTrackbar("ValLow", "Trackbars", &(filter.lowV), 255);
 	cv::createTrackbar("ValHigh", "Trackbars", &(filter.highV), 255);
-	cv::createTrackbar("minArea", "Trackbars", &minArea, 150);
-	cv::createTrackbar("maxArea", "Trackbars", &maxArea, 2000);
-	cv::createTrackbar("minCircularity", "Trackbars", &minCircularity, 100);
-	cv::createTrackbar("opening", "Trackbars", &open, 15);
-	cv::createTrackbar("close", "Trackbars", &close, 15);
-	cv::createTrackbar("smoothing", "Trackbars", &smoothing, 100);
+	cv::createTrackbar("minArea", "Trackbars", &(filter.minArea), 150);
+	cv::createTrackbar("maxArea", "Trackbars", &(filter.maxArea), 2000);
+	cv::createTrackbar("minCircularity", "Trackbars", &(filter.minCircularity), 100);
+	cv::createTrackbar("Storlek på opening", "Trackbars", &(filter.open), 15);
+	cv::createTrackbar("Storlek på closing", "Trackbars", &(filter.close), 15);
+	// Skjutreglage för kompassens brytfrekvens.
+	cv::createTrackbar("Brytfrekvens för kompass", "Trackbars", &smoothing, 500);
 }
 
-// Denna kod körs "ofta" av moderklassen.
+// Denna kod körs av moderklassen.
 void WebcamApp::update() {
 	cv::Mat captureData;
 
@@ -112,10 +121,8 @@ void WebcamApp::update() {
 		// Om bildbehandlingen slutförts vill vi hantera informationen och starta en ny omgång med 
 		// senaste frame.
 		compass.SetSmoothing(smoothing);
+
 		if (coords.Ready()) {
-
-			coords.SetHSV(filter);
-
 			calcThread.join();
 
 			// Beroende på värdet på variabeln displayMode visar vi olika bilder.
@@ -127,13 +134,17 @@ void WebcamApp::update() {
 			else if (displayMode == 1) {
 				returnImage = coords.GetFilteredImage();
 			}
-			std::pair<int, int> pos = coords.GetCoords();
+			Coords::Coord coord = coords.GetCoords();
+			
+			float ang = (coord.size / returnImage.cols)*horisontalFov*(PI/180);
+			int distance = objSize / (tan(ang));
+			std::cout << "dist: " << std::to_string(distance) << "      " 
+				<< "ang: " << std::to_string(ang) << "\n";
+			navigator->SetCoords(coord, distance);
 
-			navigator->SetCoords(pos, coords.ValidCoords());
-
-			if (coords.ValidCoords()) {
+			if (coord.valid) {
 				if (cross) {
-					Coords::DrawCross(pos.first, pos.second, returnImage);
+					Coords::DrawCross(coord.x, coord.y, returnImage);
 				}
 			}
 
@@ -142,7 +153,7 @@ void WebcamApp::update() {
 
 			// Visa den returnerade bilden.
 			imshow("Image", returnImage);
-			
+
 			// Starta ny beräkningståd med senaste frame.
 			calcThread = std::thread(&WebcamApp::calcCoordsCall, this, captureData);
 		}
@@ -170,6 +181,9 @@ void WebcamApp::onKey(int key, int scancode, int action, int mods) {
 		if (key == GLFW_KEY_M) {
 			displayMode = !displayMode;
 		}
+		if (key == GLFW_KEY_C) {
+			cross = !cross;
+		}
 		else if (key == GLFW_KEY_L) {
 			navigator->Land();
 		}
@@ -188,7 +202,7 @@ void WebcamApp::renderScene() {
 
 	// Helt självklart!
 	using namespace oglplus;
-	
+
 	// Rensa allt som renderats hittills. Den här delen av kdoen förstår jag! /André
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	MatrixStack & mv = Stacks::modelview();

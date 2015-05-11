@@ -16,30 +16,18 @@ koordinaterna hinner ändras mellan anrop till ValidCoords och GetCoords.
 using cv::Mat;
 
 // Konstruktor som använder medskickade filtervärden för att filtrera bilden.
-Coords::Coords(HSVfilter& filter) : filter(filter) {}
-
 Coords::Coords() {}
 
 // Det går att modifiera filtervärdena under exekvering.
 // TODO: Gör threadsafe med en semafor, som även låses där värdena används i koden
-void Coords::SetHSV(HSVfilter& newFilter) {
-	filter = newFilter;
-}
 
 bool Coords::Ready() {
 	return ready;
 }
 
-// Returnerar en kombination av COORDS_CIRCLE och COORDS_FILTER beroende på vilka
-// metoder som lyckats beräkna koordinater.
-bool Coords::ValidCoords() {
-	return validCoords;
-}
-
 // Returnerar den filterade bilden. 
 // Returnerar en kopia, inte en referens, för att det skall vara säkert för 
 // mottagaren att inte bilden modifieras.
-
 cv::Mat Coords::GetFilteredImage() {
 	std::lock_guard<std::mutex> guard(filteredLock);
 	if (ready) {
@@ -54,35 +42,27 @@ cv::Mat Coords::GetFilteredImage() {
 // TODO: Retuerna huruvida koordinaterna är valid samtidigt, så att man alltid vet om returnerade
 // koordinater är sanna. Annars finns risk att metoden ValidCoords körs efter att koordinaterna 
 // ändrats.
-std::pair<int, int> Coords::GetCoords() {
-
-	// Lås koordinaterna under beräkning
-	std::lock_guard<std::mutex> guard(coordsLock);
-
-	if (validCoords) {
-		return posFilter;
-	}
-
-	// Om ingen metod lyckats, returnera 0.
-	else {
-		return std::pair<int, int>(0, 0);
-	}
+Coords::Coord Coords::GetCoords() {
+	return coord;
 }
 
 // Beräkna koordinater genom att filtrera bilden
-void Coords::CalculateCoords(const cv::Mat& imgOriginal,
-	int minArea, int maxArea, int minCircularity, 
-	int open, int close) {
+void Coords::CalculateCoords(const cv::Mat& imgOriginal, CoordsFilter filter, bool interlaced) {
 
 	// Gör koden mycket renare då nästan varje rad använder cv-metoder
 	using namespace cv;
 
-	// Eftersom vi har börjat beräkna från en ny frame är inte längre koordinaterna 
-	// giltiga.
-	validCoords = false;
-
 	// Eftersom vi håller på att beräkna är vi inte redo att börja beräkna.
 	ready = false;
+	
+	// Om bilden är sammanflätad använder vi bara varannan rad dubblerad.
+	Mat interlacedImg(0, imgOriginal.rows, CV_8UC3);
+	if (interlaced) {
+		for (int i = 0; i < imgOriginal.rows; i += 2) {
+			interlacedImg.push_back(imgOriginal.row(i));
+			interlacedImg.push_back(imgOriginal.row(i));
+		}
+	}
 
 	// Skapa en semafor för koordinater, men lås den inte (std::defer_lock).
 	std::unique_lock<std::mutex> coordsGuard(coordsLock, std::defer_lock);
@@ -91,8 +71,12 @@ void Coords::CalculateCoords(const cv::Mat& imgOriginal,
 	// Engelska kommentarer är från exempelkod från opencv.org.
 	
 	Mat imgHSV;
-	cvtColor(imgOriginal, imgHSV, COLOR_BGR2HSV); //Convert the captured frame from BGR to HSV
-
+	if (interlaced) {
+		cvtColor(interlacedImg, imgHSV, COLOR_BGR2HSV); //Convert the captured frame from BGR to HSV
+	}
+	else {
+		cvtColor(imgOriginal, imgHSV, COLOR_BGR2HSV); //Convert the captured frame from BGR to HSV
+	}
 	Mat imgHSV2 = imgHSV.clone();
 
 	inRange(imgHSV, Scalar(filter.lowH, filter.lowS, filter.lowV),
@@ -103,20 +87,20 @@ void Coords::CalculateCoords(const cv::Mat& imgOriginal,
 
 	imgHSV += imgHSV2; //addera för att möjliggöra detektion även vid överexponering
 
-	if (open) {
+	if (filter.open) {
 		// Morfologisk öppning. Se opencv-dokumentation på 
 		// http://docs.opencv.org/doc/tutorials/imgproc/erosion_dilatation/erosion_dilatation.html
-		erode(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(open, open)));
-		dilate(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(open, open)));
+		erode(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(filter.open, filter.open)));
+		dilate(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(filter.open, filter.open)));
 	}
-	if (close) {
+	if (filter.close) {
 		// Morfologisk stängning, se föregående länk. 
-		dilate(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(close, close)));
-		erode(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(close, close)));
+		dilate(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(filter.close, filter.close)));
+		erode(imgHSV, imgHSV, getStructuringElement(MORPH_ELLIPSE, Size(filter.close, filter.close)));
 	}
+
 	// Anpassat från: 
 	// http://stackoverflow.com/questions/8076889/tutorial-on-opencv-simpleblobdetector
-
 	cv::SimpleBlobDetector::Params params;
 	params.minDistBetweenBlobs = 100;
 	params.filterByInertia = false;
@@ -125,41 +109,63 @@ void Coords::CalculateCoords(const cv::Mat& imgOriginal,
 	params.filterByCircularity = true;
 	params.filterByArea = true;
 	params.blobColor = 255;
-	params.minCircularity = ((float)minCircularity) / (100.0);
-	params.minArea = max(minArea, 1);
-	params.maxArea = max(maxArea, 1);
+	params.minCircularity = ((float)filter.minCircularity) / (100.0);
+	params.minArea = max(filter.minArea, 1);
+	params.maxArea = max(filter.maxArea, 1);
 
 	SimpleBlobDetector blobDetector(params);
 	std::vector<KeyPoint> keypoints;
 	blobDetector.detect(imgHSV, keypoints);
 
 	Mat imgKeypoints;
-	drawKeypoints(imgHSV, keypoints, imgKeypoints, Scalar(200, 0, 150),
+	drawKeypoints(imgHSV, keypoints, imgKeypoints, Scalar(255, 0, 255),
 		DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
 
-	// Lås koordinaterna med tidigare skapad semafor. 
-	coordsGuard.lock();
+	// Gå igenom samtliga detekterade objekt och beräkna skillnaden i avstånd
+	// och storlek mellan respektive objekt och förra detektionen.
 
-	int mindist = std::numeric_limits<int>::max();
-	int dist, disty, distx;
-	int newposx, newposy;
-	int size = keypoints.size();
-	if (size > 0)
+	// Skillnaden i storlek
+	float sizediff;
+	// Totala avståndet, samt avståndet i x- och y-led
+	float dist, disty, distx;
+	// Nuvarande minsta avstånd är max.
+	float mindist = std::numeric_limits<float>::max();
+
+	// Tillfällig ny position. Efter loopen kommer detta vara den bästa matchningen
+	float newposx, newposy, newsize;
+	
+	// Antalet detekterade objekt
+	int num = keypoints.size();
+	if (num > 0)
 	{
-		for (int i = 0; i < size; i++) {
-			disty = posFilter.first - keypoints[i].pt.x;
-			distx = posFilter.second - keypoints[i].pt.y;
-			dist = sqrt((disty*disty) + (distx*distx));
+		for (int i = 0; i < num; i++) {
+			disty = coord.x - keypoints[i].pt.x;
+			distx = coord.y - keypoints[i].pt.y;
+			sizediff = coord.size - keypoints[i].size;
+			// Tredimensionella avståndet där storleken är en av dimensionerna (representerande
+			// avståndet till objektet i verkligheten)
+			dist = sqrt((disty*disty) + (distx*distx) + (sizediff*sizediff));
 			if (dist < mindist) {
 				mindist = dist;
-				newposx = keypoints[i].pt.x;// static_cast<int>(dM10 / dArea + 0.5);
-				newposy = keypoints[i].pt.y; // static_cast<int>(dM01 / dArea + 0.5);
+				newposx = keypoints[i].pt.x; 
+				newposy = keypoints[i].pt.y; 
+				newsize = keypoints[i].size;
 			}
 		}
-		// Eftersom vi lyckades beräkna koordinaterna så sätter vi flaggan.
-		validCoords = true;
-		posFilter.first = newposx;
-		posFilter.second = newposy;
+		// Lås koordinaterna med tidigare skapad semafor. 
+		coordsGuard.lock();
+		
+		// Eftersom vi lyckades beräkna koordinaterna markeras koordinaterna som korrekta.
+		coord.valid = true;
+		coord.x = newposx;
+		coord.y = newposy;
+		coord.size = newsize;
+	}
+	else {
+		// Lås koordinaterna med tidigare skapad semafor. Låt dock tidigare beräknade
+		// koordinater vara kvar för att underlätta avståndsberäkningen ovan.
+		coordsGuard.lock();
+		coord.valid = false;
 	}
 	coordsGuard.unlock();
 
@@ -181,6 +187,7 @@ void Coords::DrawCross(int x, int y, Mat& image) {
 	//UPDATE:JUNE 18TH, 2013
 	//added 'if' and 'else' statements to prevent
 	//memory errors from writing off the screen (ie. (-25,-25) is not within the window!)
+
 	//Modifierad 2015-05-09 med max och min för att undvika if/else vilka gjorde koden
 	//mer otydlig
 

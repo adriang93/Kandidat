@@ -16,9 +16,8 @@ TODO: Länk till licens här.
 #include "Compass.h"
 #include "NavigatorComm.h"
 
-// Läsa filer, std::fstream samt std::cout och ::cin
+// Läsa filer, std::fstream
 #include <iostream>
-#include <cctype>
 #include <string>
 
 // Från OculusRiftInAction
@@ -32,50 +31,49 @@ TODO: Länk till licens här.
 
 class WebcamApp : public RiftApp {
 private:
+	// Tråden som beräknar position i bilden
+	std::thread calcThread;
 	// Har vi börjat beräkna position i bilden? 
 	bool started = false;
-
-	// Vill vi rita ett kors för att markera aktuell beräknad position?
-	bool cross = true;
-	
 	// Vilken sorts bild vill vi visa; originalbild eller filtrearad bild?
 	int displayMode = 1;
+	// Vill vi rita ett kors för att markera aktuell beräknad position?
+	bool cross = true;
 
-	// parametrar för objektdetekteringen
-	int minArea;
-	int maxArea;
-	int minCircularity;
-	int open;
-	int close;
-
-	// parameter för kompassfiltreringen
-	int smoothing; 
+	// Storleken, i millimeter, på objektet som skall detekteras samt horisontell fov. 
+	// Används för avståndsbestämning
+	int objSize;
+	float horisontalFov;
 
 	// Portnummer för koimmunikation med Mission Planner-scriptet
 	int port;
-	std::string host;
 	
-	// Tråden som beräknar position i bilden
-	std::thread calcThread;
+	// Handtag till konsollen
+	HANDLE consoleHandle;
+	bool console = false;
 
+	// Parametrar för objektdetekteringen
+	Coords::CoordsFilter filter;
+	bool interlaced;
 	Coords coords;
+
+	// parameter för kompassfiltreringen
+	int smoothing;
 	Compass compass;
+
 	StreamHandler captureHandler;
 	NavigatorComm* navigator;
 		
 	cv::Mat returnImage;
 
 	void calcCoordsCall(cv::Mat& image);
-	void SetConsoleRow(int);
 
 	// Ärvda från exempel 13.2. Används för renderingen.
 	TexturePtr texture;
 	ProgramPtr program;
 	ShapeWrapperPtr videoGeometry;
-	Coords::HSVfilter filter;
 
 public:
-	GLboolean glewExperimental;
 	// Dessa kallas av moderklassen och är ärvda metoder från 
 	// RiftApp från OculusRiftInAction-resurserna
 	WebcamApp();

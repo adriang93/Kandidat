@@ -11,22 +11,30 @@ public:
 	NavigatorComm(Compass & compass, int port);
 	~NavigatorComm();
 	void SetHeading(float newHeading);
-	void SetCoords(std::pair<int, int> coords, bool valid);
+	void SetCoords(Coords::Coord newCoord, int newDistance);
+
 	void PrintLine(std::string text);
 	void Land();
 	void Stop();
+
 private:
 	float heading = 0;
+	int port;
+
 	Compass &compassModule;
-	std::pair<int, int> coords;
+
+	int distance;
+	Coords::Coord coord;
+
 	std::thread outputThread;
 	std::mutex outputLock;
 	std::mutex waitingLock;
-	int port;
+	
 	std::string newMessage;
 	bool waitingMessage;
-	bool stopped = false;
-	bool validCoords = false;
+
 	bool connected;
+	bool stopped = false;
+
 	void OutputLoop();
 };

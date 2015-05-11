@@ -2,10 +2,9 @@
 #include "NavigatorComm.h"
 
 NavigatorComm::NavigatorComm(Compass &compass, int port) : compassModule(compass),
-port(port), waitingMessage(false), newMessage(""), connected(false)
+	port(port), waitingMessage(false), newMessage(""), 
+	connected(false)
 {
-	coords.first = 0;
-	coords.second = 0;
 	outputThread = std::thread(&NavigatorComm::OutputLoop, this);
 }
 
@@ -20,10 +19,10 @@ void NavigatorComm::SetHeading(float newHeading)
 	heading = newHeading;
 }
 
-void NavigatorComm::SetCoords(std::pair<int, int> newCoords, bool valid)
+void NavigatorComm::SetCoords(Coords::Coord newCoord, int newDistance)
 {
-	coords = newCoords;
-	validCoords = valid;
+	coord = newCoord;
+	distance = newDistance;
 }
 
 void NavigatorComm::Land() {
@@ -77,11 +76,13 @@ void NavigatorComm::OutputLoop()
 				{
 					std::unique_lock<std::mutex> guard(outputLock);
 					heading = compassModule.FilteredHeading();
-					message = std::to_string(heading) + "," + std::to_string(coords.first)
-						+ "," + std::to_string(coords.second) + "," + std::to_string(validCoords);
+					message = std::to_string(heading) + "," + std::to_string(coord.x)
+						+ "," + std::to_string(coord.y) + "," + std::to_string(coord.valid) 
+						+ "," + std::to_string(coord.size);
 					guard.unlock();
 				}
 				boost::asio::write(socket, boost::asio::buffer(message), error);
+				std::cout << message;
 				if ((error == boost::asio::error::eof) || (error == boost::asio::error::connection_reset) || (error == boost::asio::error::connection_aborted)) {
 					connected = false;
 					break;
