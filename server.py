@@ -25,10 +25,10 @@ minThrottle = 1200
 targetDistance = 2
 distanceTolerance = 0.1*targetDistance
 
+ready = False
 
 targetAltitude = 0.5
 altitudeTolerance = 0.1*targetAltitude # allow targetAltitude +- altitudeTolerance
-
 
 def regulateDistance(): # keep the drone at the correct distance from the user
 	diff = cs.sonarrange - targetDistance
@@ -89,8 +89,6 @@ def regulateHeight(coordY):
 	elif coordX < (percentage - heightTolerancePercentage):
 		throttle(percentage)
 
-
-
 def moveForward(percentage): # low ->slow, high -> fast
 	if validPercentage(percentage):
 		pitch(50-(percentage/2))
@@ -149,6 +147,7 @@ def start():
 			throttle(50)
 			timesRight = timesRight + 1
 			print timesRight
+	ready = True
 
 
 def moveLeft(percentage): # low ->slow, high -> fast
@@ -229,12 +228,16 @@ while True:
                         print "startar"
                         start()
 
-                elif myList[3] == "1": # valid data (just coords?)
+                elif myList[3] == "1" and ready == True: # valid data and has started
                         coordX = myList[1]		
                         centerDrone(int(coordX))
 
                         coordY = myList[2] 
+                        regulateHeight(coordY)
                         # Could be used for additional robustness for height regulation
 
-                        oculusHeading = myList[0]
-                        regulateHeading(float(oculusHeading))
+                        #oculusHeading = myList[0]
+                        #regulateHeading(float(oculusHeading))
+
+                        #regulateDistance()
+
