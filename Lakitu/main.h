@@ -42,8 +42,10 @@ private:
 
 	// Storleken, i millimeter, på objektet som skall detekteras samt horisontell fov. 
 	// Används för avståndsbestämning
+	int distance = 0;
 	int objSize;
 	float horisontalFov;
+	int distanceCutoff;
 
 	// Portnummer för koimmunikation med Mission Planner-scriptet
 	int port;
@@ -58,10 +60,12 @@ private:
 	Coords coords;
 
 	// parameter för kompassfiltreringen
-	int smoothing;
+	int compassCutoff;
 	Compass compass;
 
 	StreamHandler captureHandler;
+	int frameDelay = 0;
+
 	NavigatorComm* navigator;
 		
 	cv::Mat returnImage;

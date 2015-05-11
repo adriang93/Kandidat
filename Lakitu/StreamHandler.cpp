@@ -63,16 +63,24 @@ bool StreamHandler::GetFrame(cv::Mat& out) {
 	return true;
 }
 
+int StreamHandler::GetDelay() {
+	return frameDelay;
+}
+
 void StreamHandler::CaptureLoop() {
 	cv::Mat captured;
+	double timer = GetTickCount();
+	int diff;
 	while (!stopped) {
 		videoCapture.read(captured);
+
+		frameDelay = GetTickCount() - timer;
+
 		cv::flip(captured.clone(), captured, 0);
 		SetFrame(captured);
+		timer = GetTickCount();
 		if (useFile) {
-			//antar 30 fps. Inte kritiskt värde då uppspelning från fil enbart
-			//görs för testning
-			Sleep(1000 / 30); 
+			Sleep(1000 / videoCapture.get(CV_CAP_PROP_FPS));
 		}
 	}
 }

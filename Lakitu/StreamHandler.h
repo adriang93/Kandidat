@@ -20,9 +20,13 @@ private:
 	//Vilken device skall vi öppna? Standard, om inget annat sätts, är device 0.
 	int device = 0;
 	std::string file;
+	bool useFile = false;
+
 	bool hasFrame = false;
 	bool stopped = false;
-	bool useFile = false;
+
+	int frameDelay;
+
 	cv::VideoCapture videoCapture;
 	std::thread captureThread;
 	std::mutex mutex;
@@ -32,9 +36,14 @@ public:
 	StreamHandler();
 	void SetDevice(int);
 	void SetFile(std::string);
+
 	float StartCapture();
 	void StopCapture();
+
+	int GetDelay();
+
 	void SetFrame(const cv::Mat& newFrame);
 	bool GetFrame(cv::Mat& out);
+
 	void CaptureLoop();
 };

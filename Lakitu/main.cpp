@@ -29,7 +29,7 @@ WebcamApp::WebcamApp() {
 		>> filter.lowV >> filter.highV >> filedevice >> port
 		>> filter.minArea >> filter.maxArea >> filter.minCircularity
 		>> filter.open >> filter.close >> objSize >> horisontalFov
-		>> smoothing >> interlaced >> console;
+		>> distanceCutoff >> compassCutoff >> interlaced >> console;
 	//Skapa en WebcamHandler med det device som lästs in från filen.
 	try {
 		int device = std::stoi(filedevice);
@@ -108,20 +108,20 @@ void WebcamApp::initGl() {
 	cv::createTrackbar("Storlek på opening", "Trackbars", &(filter.open), 15);
 	cv::createTrackbar("Storlek på closing", "Trackbars", &(filter.close), 15);
 	// Skjutreglage för kompassens brytfrekvens.
-	cv::createTrackbar("Brytfrekvens för kompass", "Trackbars", &smoothing, 500);
+	cv::createTrackbar("Brytfrekvens för kompass", "Trackbars", &compassCutoff, 500);
+	cv::createTrackbar("Brytfrekvens för avstånd", "Trackbars", &distanceCutoff, 10);
 }
 
 // Denna kod körs av moderklassen.
 void WebcamApp::update() {
 	cv::Mat captureData;
-
 	// Efterföljande kod kommer vara bunden till hur ofta vi kan få en frame från videoenheten.
+	compass.SetSmoothing(compassCutoff);
 	if (captureHandler.GetFrame(captureData)) {
+		frameDelay = captureHandler.GetDelay();
 
 		// Om bildbehandlingen slutförts vill vi hantera informationen och starta en ny omgång med 
 		// senaste frame.
-		compass.SetSmoothing(smoothing);
-
 		if (coords.Ready()) {
 			calcThread.join();
 
@@ -136,10 +136,16 @@ void WebcamApp::update() {
 			}
 			Coords::Coord coord = coords.GetCoords();
 			
+			float L = 2 * PI * frameDelay/1000 * distanceCutoff;
+			float smoothing = L/(L + 1);
+			
 			float ang = (coord.size / returnImage.cols)*horisontalFov*(PI/180);
-			int distance = objSize / (tan(ang));
-			std::cout << "dist: " << std::to_string(distance) << "      " 
-				<< "ang: " << std::to_string(ang) << "\n";
+			int diff = (objSize / (tan(ang))) - distance;
+			distance += smoothing * diff;
+
+			std::cout << "dist: " << std::to_string(distance) 
+				<< "      " << "ang: " << std::to_string(L) 
+				<< "      " << "smooth: " << std::to_string(smoothing) << "\n";
 			navigator->SetCoords(coord, distance);
 
 			if (coord.valid) {

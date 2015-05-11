@@ -33,7 +33,7 @@ void Compass::SetHMD(ovrHmd* h) {
 // Uppdateringshastigheten är nära 1000 Hz vilket ger deltaT ~= 0.001
 void Compass::SetSmoothing(int cutoffFreq) {
 	float L = 2 * MATH_FLOAT_PI * 0.001 * cutoffFreq;
-	smoothing = (L) / (L + 1);
+	smoothing = L/(L + 1);
 }
 
 // Starta kompassextraheringen i en separat tråd. Spara referensen till tråden i variabeln thread.
