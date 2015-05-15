@@ -236,7 +236,8 @@ while True:
                 elif myList[3] == "1" and ready == True: # valid data and has started
                         coordX = float(myList[1])
                         centerDrone(coordX)
-                        coordY = float(myList[2]) 
+                        
+                        coordY = float(myList[2])
                         regulateHeight(coordY)
                         # Could be used for additional robustness for height regulation
 
