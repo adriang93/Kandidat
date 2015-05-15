@@ -3,10 +3,12 @@ import time
 
 print 'start of program'
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-resolutionX = 720
-resolutionY = 480
+resolutionX = 720.0
+resolutionY = 480.0
 
 centerTolerance = resolutionX*0.05
+heightTolerance = resolutionY*0.05
+heightTolerancePercentage = 10 
 
 maxRoll = 2000
 minRoll = 1200
@@ -17,16 +19,16 @@ minYaw = 1200
 maxPitch = 2000
 minPitch = 1200
 
-maxThrottle = 2000
+maxThrottle = 1500
 minThrottle = 1200
 
 targetDistance = 2
 distanceTolerance = 0.1*targetDistance
 
+ready = False
 
 targetAltitude = 0.5
 altitudeTolerance = 0.1*targetAltitude # allow targetAltitude +- altitudeTolerance
-
 
 def regulateDistance(): # keep the drone at the correct distance from the user
 	diff = cs.sonarrange - targetDistance
@@ -78,6 +80,16 @@ def regulateHeading(oculusHeading):
 		percentage = 100*((180-headingDiff)/180)
 		turnRight(percentage)
 
+def regulateHeight(coordY):
+	percentage = coordY*100/resolutionY
+        print "regulate heihgt perc: " + str(percentage)
+	if coordY > (percentage + heightTolerancePercentage):
+		throttle(percentage)
+
+	elif coordX < (percentage - heightTolerancePercentage):
+		throttle(percentage)
+	else:
+                throttle(50)
 
 def moveForward(percentage): # low ->slow, high -> fast
 	if validPercentage(percentage):
@@ -97,9 +109,11 @@ def validPercentage(percentage):
 
 def throttle(percentage): # in altitude hold, 40-60 hold current altitude, 
 						   # >60 increases altitude, <40 lowers it
+        print "throttle: " + str(percentage)
 	if validPercentage(percentage):
 		valueRange = maxThrottle-minThrottle
 		value = percentage*valueRange
+		print "sander RC-varde: " + str(minThrottle+value)
 		Script.SendRC(3,minThrottle+value,True)
 
 def land():
@@ -137,6 +151,7 @@ def start():
 			throttle(50)
 			timesRight = timesRight + 1
 			print timesRight
+	ready = True
 
 
 def moveLeft(percentage): # low ->slow, high -> fast
@@ -184,7 +199,7 @@ def turnLeft(percentage): # low ->slow, high -> fast
 print 'variables initiated'
 try:
 	print "binding"
-	s.bind(("localhost", 6550))
+	s.bind(("localhost", 6551))
 except socket.error, msg:
 	print "socket error"
 	print str(msg[0]) + str(msg[1])
@@ -196,14 +211,15 @@ while True:
 
 	while True:
                 input = conn.recv(1024) # in format (heading,coordX,coordY,validCoord) alternatively (START) or (STOP)
-                print "input: " + input
+                # print "input: " + input
                 if input == '':
                         print "Connection closed from other side"
                         break
                 myList = input.split(',')
                 print myList
-                regulateDistance()
-
+                # regulateDistance()
+                ready = True
+                
                 if myList[0] == 'Land' or myList[0] == '':  
                 # empty string could mean the program has crashed
                         print "landar"
@@ -215,14 +231,17 @@ while True:
 
                 elif myList[0][:5] ==  'START':
                         print "startar"
-                        start()
+                        #start()
 
-                elif myList[3] == "1": # valid data (just coords?)
-                        coordX = myList[1]		
-                        centerDrone(int(coordX))
-
-                        coordY = myList[2] 
+                elif myList[3] == "1" and ready == True: # valid data and has started
+                        coordX = float(myList[1])
+                        centerDrone(coordX)
+                        coordY = float(myList[2]) 
+                        regulateHeight(coordY)
                         # Could be used for additional robustness for height regulation
 
-                        oculusHeading = myList[0]
-                        regulateHeading(float(oculusHeading))
+                        #oculusHeading = myList[0]
+                        #regulateHeading(float(oculusHeading))
+
+                        #regulateDistance()
+
