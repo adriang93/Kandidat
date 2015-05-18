@@ -2,8 +2,9 @@
 
 Header för Compassmodulen. Innehåller inga värden; bara publika och privata metoder. 
 
-*/
+All kod skriven av André Wallström.
 
+*/
 
 #pragma once
 
@@ -24,7 +25,8 @@ private:
 	// Oculus Rift-objektet
 	const ovrHmd* hmd;
 
-	// Två olika sorters kompassriktning; den momentana och den filtrerade
+	// Två olika sorters kompassriktning, den momentana och den filtrerade, 
+	// finns tillgängliga
 	float filteredHeading, unfilteredHeading;
 	float smoothing;
 	void SensorLoop();

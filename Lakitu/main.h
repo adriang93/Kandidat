@@ -4,7 +4,11 @@
 
 Header för huvudmodulen som initerar alla värden. Baserad på exempel 13.2 från OculusRiftInAction.
 
-TODO: Länk till licens här.
+https://github.com/OculusRiftInAction/OculusRiftInAction
+
+All kod skriven av André Wallström baserat på exempel 13.2 ovan (som saknade headerfil).
+Flera av de publika metodprototyperna är baserade på exempelkoden. Vilka som är skrivna av
+projektet och vilka som är från exempekoden framgår i källkodsfilen.
 
 */
 
@@ -23,12 +27,11 @@ TODO: Länk till licens här.
 // Från OculusRiftInAction
 #include "Resources.h"
 #include "ResourceEnums.h"
-
-// Behövs för att alla shaders skall laddas in
 #include "oglplus/texture_filter.hpp"
 #include "Common.h"
 
-
+// RiftApp är en klass från OculusRiftExamples som hanterar rendering och
+// kommunikation med Oculus Rift
 class WebcamApp : public RiftApp {
 private:
 	// Tråden som beräknar position i bilden
@@ -50,25 +53,29 @@ private:
 	// Portnummer för koimmunikation med Mission Planner-scriptet
 	int port;
 	
-	// Handtag till konsollen
+	// Handtag till konsollen. Används ej
 	HANDLE consoleHandle;
+	// Sätts till true via filinläsning om konsoll skall användas
 	bool console = false;
 
 	// Parametrar för objektdetekteringen
 	Coords::CoordsFilter filter;
 	bool interlaced;
+	// Koordinatberäkningsklassen
 	Coords coords;
 
 	// parameter för kompassfiltreringen
 	int compassCutoff;
+	// Kompassberäkningsklassen
 	Compass compass;
 
+	// Klassen som extraherar data från videoström
 	StreamHandler captureHandler;
+	// Används för att lågpassfiltrera avståndsberäkningen
 	int frameDelay = 0;
 
+	// Kommunikationsklass för att skcika data till navigationsmodulen
 	NavigatorComm* navigator;
-		
-	cv::Mat returnImage;
 
 	void calcCoordsCall(cv::Mat& image);
 

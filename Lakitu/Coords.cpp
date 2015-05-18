@@ -1,12 +1,9 @@
 /*
 
-Kod som beräknar positionen av ett objekt, genom cirkeligenkänning, färgfiltrering eller båda,
-och spara koordinaterna. Beräknar även hur bra de två metodernas resultat överensstämmer.
+Modulen beräknar koordinaten till ett objekt i bilden. Koordinaterna sparas internt och kan hämtas 
+av kallande klass. Använder OpenCV för att beräkna koordinatvärdena.
 
-TODO: Licens för openCV-exempelkoden.
-
-TODO, viktigare: Returnera både koordinater och huruvida de är giltiga för att undvika att
-koordinaterna hinner ändras mellan anrop till ValidCoords och GetCoords.
+All kod utom det som markerats skriven av André Wallström.
 
 */
 
@@ -18,9 +15,7 @@ using cv::Mat;
 // Konstruktor som använder medskickade filtervärden för att filtrera bilden.
 Coords::Coords() {}
 
-// Det går att modifiera filtervärdena under exekvering.
-// TODO: Gör threadsafe med en semafor, som även låses där värdena används i koden
-
+// Returnerar true om beräkningar slutförts
 bool Coords::Ready() {
 	return ready;
 }
@@ -29,12 +24,14 @@ bool Coords::Ready() {
 // Returnerar en kopia, inte en referens, för att det skall vara säkert för 
 // mottagaren att inte bilden modifieras.
 cv::Mat Coords::GetFilteredImage() {
+
+	// Lås semaforen medan bilden returneras så att inte bilden modifieras
 	std::lock_guard<std::mutex> guard(filteredLock);
 	if (ready) {
 		return filteredImage;
 	}
 	else {
-		return cv::Mat(640, 480, CV_8UC3, cv::Scalar(0, 0, 0));
+		NULL;
 	}
 }
 
@@ -47,7 +44,8 @@ Coords::Coord Coords::GetCoords() {
 }
 
 // Beräkna koordinater genom att filtrera bilden
-void Coords::CalculateCoords(const cv::Mat& imgOriginal, CoordsFilter filter, bool interlaced) {
+void Coords::CalculateCoords(const cv::Mat& imgOriginal, 
+		CoordsFilter filter, bool interlaced, bool returnFiltered) {
 
 	// Gör koden mycket renare då nästan varje rad använder cv-metoder
 	using namespace cv;
@@ -55,7 +53,8 @@ void Coords::CalculateCoords(const cv::Mat& imgOriginal, CoordsFilter filter, bo
 	// Eftersom vi håller på att beräkna är vi inte redo att börja beräkna.
 	ready = false;
 	
-	// Om bilden är sammanflätad använder vi bara varannan rad dubblerad.
+	// Om bilden är sammanflätad använder vi bara varannan rad dubblerad för att
+	// slippa randig bild till detekteringen
 	Mat interlacedImg(0, imgOriginal.rows, CV_8UC3);
 	if (interlaced) {
 		for (int i = 0; i < imgOriginal.rows; i += 2) {
@@ -64,12 +63,8 @@ void Coords::CalculateCoords(const cv::Mat& imgOriginal, CoordsFilter filter, bo
 		}
 	}
 
-	// Skapa en semafor för koordinater, men lås den inte (std::defer_lock).
-	std::unique_lock<std::mutex> coordsGuard(coordsLock, std::defer_lock);
-	
 	// Nedanstående kod delvis anpassad från OpenCV:s egna exempel från opencv.org.
 	// Engelska kommentarer är från exempelkod från opencv.org.
-	
 	Mat imgHSV;
 	if (interlaced) {
 		cvtColor(interlacedImg, imgHSV, COLOR_BGR2HSV); //Convert the captured frame from BGR to HSV
@@ -79,14 +74,16 @@ void Coords::CalculateCoords(const cv::Mat& imgOriginal, CoordsFilter filter, bo
 	}
 	Mat imgHSV2 = imgHSV.clone();
 
+	// Filtrera ut alla bildpunkter som omfattas av filtrets parametrar
 	inRange(imgHSV, Scalar(filter.lowH, filter.lowS, filter.lowV),
 		Scalar(filter.highH, filter.highS, filter.highV), imgHSV); //Threshold the image
 																   
-		//Hitta nästan-vita pixlar för att kunna detektera överexponerade objekt	
+	//Hitta nästan-vita bildpunkter för att kunna detektera överexponerade objekt	
 	inRange(imgHSV2, Scalar(0, 0, 245),	Scalar(255, 255, 255), imgHSV2); 
 
 	imgHSV += imgHSV2; //addera för att möjliggöra detektion även vid överexponering
 
+	// Utför bara de morfologiska operationerna om värdena på dem är > 0
 	if (filter.open) {
 		// Morfologisk öppning. Se opencv-dokumentation på 
 		// http://docs.opencv.org/doc/tutorials/imgproc/erosion_dilatation/erosion_dilatation.html
@@ -101,50 +98,63 @@ void Coords::CalculateCoords(const cv::Mat& imgOriginal, CoordsFilter filter, bo
 
 	// Anpassat från: 
 	// http://stackoverflow.com/questions/8076889/tutorial-on-opencv-simpleblobdetector
+	
+	// Parametrar för SimpleBlobDetector skapas
 	cv::SimpleBlobDetector::Params params;
 	params.minDistBetweenBlobs = 100;
+	
+	// Filtrera inte baserat på avsmalnad eller konvexitet
 	params.filterByInertia = false;
 	params.filterByConvexity = false;
+	
+	// Filtrera baserat på färg och enbart vita bildpunkter
 	params.filterByColor = true;
-	params.filterByCircularity = true;
-	params.filterByArea = true;
 	params.blobColor = 255;
+
+	// Filtrera baserat på cirkuläritet
+	params.filterByCircularity = true;
 	params.minCircularity = ((float)filter.minCircularity) / (100.0);
+
+	// Filtrera även baserat på area
+	params.filterByArea = true;
 	params.minArea = max(filter.minArea, 1);
 	params.maxArea = max(filter.maxArea, 1);
 
+	// Skapa detektorobjektet med parametrarna ovan.
 	SimpleBlobDetector blobDetector(params);
+	
+	// Skapa en vektor att spara alla detekterade objekt i och utför detekteringen i 
+	// bildobjektet
 	std::vector<KeyPoint> keypoints;
 	blobDetector.detect(imgHSV, keypoints);
-
-	Mat imgKeypoints;
-	drawKeypoints(imgHSV, keypoints, imgKeypoints, Scalar(255, 0, 255),
-		DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
 
 	// Gå igenom samtliga detekterade objekt och beräkna skillnaden i avstånd
 	// och storlek mellan respektive objekt och förra detektionen.
 
-	// Skillnaden i storlek
-	float sizediff;
-	// Totala avståndet, samt avståndet i x- och y-led
-	float dist, disty, distx;
-	// Nuvarande minsta avstånd är max.
-	float mindist = std::numeric_limits<float>::max();
+	float sizediff; // Skillnaden i storlek
+	float dist, disty, distx; // Totala avståndet, samt avståndet i x- och y-led
+	float mindist = std::numeric_limits<float>::max(); // Nuvarande minsta avstånd är max.
 
 	// Tillfällig ny position. Efter loopen kommer detta vara den bästa matchningen
 	float newposx, newposy, newsize;
 	
-	// Antalet detekterade objekt
-	int num = keypoints.size();
+	// Skapa en semafor för koordinater, men lås den inte  ännu (std::defer_lock).
+	std::unique_lock<std::mutex> coordsGuard(coordsLock, std::defer_lock);
+	
+	int num = keypoints.size(); // Antalet detekterade objekt
 	if (num > 0)
 	{
+		// Kontrollera alla detekterade objekt
 		for (int i = 0; i < num; i++) {
-			disty = coord.x - keypoints[i].pt.x;
-			distx = coord.y - keypoints[i].pt.y;
-			sizediff = coord.size - keypoints[i].size;
+			disty = coord.x - keypoints[i].pt.x; // Avståndet i x-led
+			distx = coord.y - keypoints[i].pt.y; // avståndet i y-led
+			sizediff = coord.size - keypoints[i].size; // skillnaden i storlek, motsvarar y-led
 			// Tredimensionella avståndet där storleken är en av dimensionerna (representerande
 			// avståndet till objektet i verkligheten)
 			dist = sqrt((disty*disty) + (distx*distx) + (sizediff*sizediff));
+
+			// Om det nyss beräknade avståndet är mindre än det hittills minsta
+			// sparas det
 			if (dist < mindist) {
 				mindist = dist;
 				newposx = keypoints[i].pt.x; 
@@ -167,11 +177,24 @@ void Coords::CalculateCoords(const cv::Mat& imgOriginal, CoordsFilter filter, bo
 		coordsGuard.lock();
 		coord.valid = false;
 	}
+	// Lås upp semaforerna
 	coordsGuard.unlock();
 
 	//Lås bilden när vi sparar kopian för att förhindra att man läser en halvskriven bild
 	std::lock_guard<std::mutex> filterGuard(filteredLock);
-	filteredImage = imgKeypoints;
+
+	// Om kallande klassen vill det kan vi spara den filtrerade bilden med alla objekt inritade
+	if (returnFiltered) {
+		Mat imgKeypoints;
+		// Koden för ritningen från exemplet nämnt ovan:
+		// http://stackoverflow.com/questions/8076889/tutorial-on-opencv-simpleblobdetector
+		drawKeypoints(imgHSV, keypoints, imgKeypoints, Scalar(255, 0, 255),
+			DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+		filteredImage = imgKeypoints;
+	}
+	else {
+		filteredImage = imgHSV;
+	}
 	ready = true;
 }
 

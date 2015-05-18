@@ -2,7 +2,11 @@
 
 Header för streamhandlern. Taget från OculusRiftInActions exempel 13.2 med små modifikationer.
 
-TODO: Länk till licens för exemplet
+https://github.com/OculusRiftInAction/OculusRiftInAction
+
+All kod skriven av André Wallström baserat på exempel 13.2 ovan (som saknade headerfil).
+Flera av de publika metodprototyperna är baserade på exempelkoden. Vilka som är skrivna av 
+projektet och vilka som är från exempekoden framgår i källkodsfilen.
 
 */
 
@@ -17,19 +21,29 @@ TODO: Länk till licens för exemplet
 
 class StreamHandler {
 private:
-	//Vilken device skall vi öppna? Standard, om inget annat sätts, är device 0.
+	// Vilken enhet skall vi öppna? Standard, om inget annat sätts, är device 0.
 	int device = 0;
+	// Filnamn, om sådant angetts
 	std::string file;
+	// Använder vi filnamn eller enhetsnummer?
 	bool useFile = false;
 
+	// Finns en bildruta att hämta?
 	bool hasFrame = false;
+	// Har vi stoppats?
 	bool stopped = false;
 
+	// Fördröjningen mellan bildrutor. Måste beräknas.
 	int frameDelay;
 
-	cv::VideoCapture videoCapture;
+	// Tråd för videoextrahering
 	std::thread captureThread;
+
+	// Objektet som hanterar videoströmmen
+	cv::VideoCapture videoCapture;
+	// Semafor för att göra det omöjligt att läsa halva bildrutor
 	std::mutex mutex;
+	// Bildrutan som hämtats
 	cv::Mat frame;
 
 public:

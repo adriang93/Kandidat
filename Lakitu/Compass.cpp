@@ -4,9 +4,11 @@ Kompassmodul. Algoritmen löst baserad på Freescales exempel:
 
 http://cache.freescale.com/files/sensors/doc/app_note/AN4248.pdf
 
-Oculus Rift-koden baserat på minimal Oculus Rift example.
+Oculus Rift-koden baserat på Oculus Rift-dokumentationen:
 
-TODO: Länk till licens.
+http://static.oculus.com/sdk-downloads/documents/Oculus_Developer_Guide_0.4.4.pdf
+
+All kod utöver det som markerats skriven av André Wallström
 
 */
 
@@ -32,7 +34,7 @@ void Compass::SetHMD(ovrHmd* h) {
 // beräkna utjämningsfaktor från brytfrekvensen som anges. 
 // Uppdateringshastigheten är nära 1000 Hz vilket ger deltaT ~= 0.001
 void Compass::SetSmoothing(int cutoffFreq) {
-	float L = 2 * MATH_FLOAT_PI * 0.001 * cutoffFreq;
+	float L = 2 * MATH_FLOAT_PI * 0.001f * cutoffFreq;
 	smoothing = L/(L + 1);
 }
 
@@ -58,6 +60,8 @@ void Compass::SensorLoop() {
 	// Om det finns en fil som heter compass.txt skriver vi kompassvärdne till den.
 	// För testning.
 	std::fstream file("compass.txt");
+
+	// Om det går att läsa filen så innebär det att vi ska skriva till fil i loopen sedan.
 	bool write;
 	if (file.good()) {
 		write = true;
@@ -79,7 +83,7 @@ void Compass::SensorLoop() {
 		ovrVector3f rotation;
 
 		// Spara rotationsaxlarnas värden i vektorn rotation. Efter detta kommer 
-		// rotation innehålla pitch, roll och yaw (kanske inte i den ordningen; kommer ej ihåg)
+		// rotation innehålla pitch, roll och yaw 
 		pose.Rotation.GetEulerAngles<OVR::Axis_Y, OVR::Axis_X, OVR::Axis_Z>(&rotation.x, &rotation.y, &rotation.z);
 
 		// Extrahera råa mätvärden från accelerometer och magnetometer.
@@ -116,31 +120,35 @@ void Compass::SensorLoop() {
 
 		// Filtrera med tidskonstanten. Brytfrekvensen sätts av kallande klass med SetCutoff.
 		// Lågpassfilter där utjämningsfaktorn är smoothing.
-		diff += smoothing * diff;
+		filteredHeading += (smoothing * diff);
 
 		// Justera tillbaka om värdet återigne slagit runt nollan.
-		if (diff > 360) {
-			diff -= 360;
+		if (filteredHeading  > 360) {
+			filteredHeading  -= 360;
 		}
-		else if (diff < 0) {
-			diff += 360;
+		else if (filteredHeading  < 0) {
+			filteredHeading  += 360;
 		}
-		filteredHeading = diff;
 
 		// Skriv testvärden till fil om compass.txt ligger i samma mapp som programmet
+		// Skriver ut samtliga värden och används för testning.
 		if (write) {
-			file << std::to_string(filteredHeading) << ", " << std::to_string(unfilteredHeading) << "\n";
+			file << std::to_string(filteredHeading) << ", " 
+				<< std::to_string(unfilteredHeading) << "\n";
 		}
 
-		// Hur många gånger per sekund skall kompassen uppdateras?
+		// Hur många millisekunder skall det sovas? Sensorerna uppdateras med 1kHz så vi 
+		// väntar en millisekund.
 		Sleep(1);
 	}
 }
 
+// Returnerar den ofiltrerade kompassriktningen
 float Compass::UnFilteredHeading() const {
 	return unfilteredHeading;
 }
 
+// Returnerar den filtrerade kompassriktningen
 float Compass::FilteredHeading() const {
 	return filteredHeading;
 }
@@ -152,15 +160,14 @@ float Compass::CalculateHeading(const ovrVector3f& magSensor) {
 	// och riktningen behöver redan vara bestämd. Händer i princip aldrig i praktisk drift, 
 	// men händer konstant om man till exempel använder emulerad Oculur Rift.
 	float direction = 0;
-	const float PI = 3.1459f;
 
 	// Beräknar vinkeln mellan de olika axlarna med tangens. Enbart axlarna i horisontalplanet behöver 
 	// användas då det ju är de som visar riktningen mot magnetisk norr. 
 	if (magSensor.x > 0) {
-		direction = 270 - atan(magSensor.z / magSensor.x) * 180 / PI;
+		direction = 270 - atan(magSensor.z / magSensor.x) * 180 / MATH_FLOAT_PI;
 	}
 	else if (magSensor.x < 0) {
-		direction = 90 - atan(magSensor.z / magSensor.x) * 180 / PI;
+		direction = 90 - atan(magSensor.z / magSensor.x) * 180 / MATH_FLOAT_PI;
 	}
 	else if ((magSensor.x == 0) & (magSensor.z < 0)) {
 		direction = 0;
@@ -180,7 +187,7 @@ void Compass::CorrectForTilt(ovrVector3f& magSensor, const ovrVector3f& rotation
 	float cosVal = cos(rotation.z);
 	float sinVal = sin(rotation.z);
 
-	// Kompensera x-axeln baserat på lutningen av y-axeln (vertikalaxeln). Enkel trigonometri.
+	// Kompensera x-axeln baserat på lutningen av y-axeln (vertikalaxeln). 
 	// Kompensera även y-axeln för att användas för beräkningarna av z-axeln senare.
 	corr.x = magSensor.x * cosVal - magSensor.y * sinVal;
 	corr.y = magSensor.y * cosVal + magSensor.x * sinVal;
@@ -190,9 +197,8 @@ void Compass::CorrectForTilt(ovrVector3f& magSensor, const ovrVector3f& rotation
 
 	// Kompensera z-axeln baserat på den redan kompenserade y-axeln.
 	corr.z = magSensor.z * cosVal + corr.y * sinVal;
+
 	magSensor.x = corr.x;
 	magSensor.y = corr.y;
 	magSensor.z = corr.z;
-
-	//magSensor = corr; <- kortare kod. Otestad, men borde funka. 
 }
