@@ -1,10 +1,10 @@
 # Kandidatarbete DATX02-15-35 2015
 
-Kod som tillhör projektet DATX02-15-35 2015
+Kod som tillhÃ¶r projektet DATX02-15-35 2015
 
 # Lakitu
 
-All kod i mappen Lakitu är skriven i C++. Lakitu är beroende av biblioteken OpenCV, OculusRiftExamples samt Boost och kräver att följande .lib-filer inkluderas:
+All kod i mappen Lakitu Ã¤r skriven i C++. Lakitu Ã¤r beroende av biblioteken OpenCV, OculusRiftExamples samt Boost och krÃ¤ver att fÃ¶ljande .lib-filer inkluderas:
 
 winmm.lib
 Ws2_32.lib
@@ -32,8 +32,8 @@ OpenCTM.lib
 ExampleResources.lib
 setupapi.lib
 
-För att kunna köra programmet krävs att Oculus Runtime version 0.4.4 eller senare är installerat.
+FÃ¶r att kunna kÃ¶ra programmet krÃ¤vs att Oculus Runtime version 0.4.4 eller senare Ã¤r installerat.
 
 # Navigationsmodul
 
-Filen server.py utgör navigationsmodulen i systemet och är skriven i Python. Filen körs från Mission Planner som ett skript.
+Filen server.py i grenen "navigationsmodul" utgÃ¶r navigationsmodulen i systemet och Ã¤r skriven i Python. Filen kÃ¶rs frÃ¥n Mission Planner som ett skript.
