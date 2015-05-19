@@ -88,7 +88,7 @@ void StreamHandler::CaptureLoop() {
 	// riskera division med noll
 	int fileLatency = videoCapture.get(CV_CAP_PROP_FPS);
 	if (fileLatency) {
-		fileLatency /= 1000;
+		fileLatency = 1000/fileLatency;
 	}
 
 	// Använder systemtimer för att räkna framerate. Låg noggrannhet

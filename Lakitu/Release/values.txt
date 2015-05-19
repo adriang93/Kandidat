@@ -1,0 +1,2 @@
+16 	40 	71	255 	59 	255	gul.mp4			6550 	60	3000 	60 	1 	4 	58	93.74	2	30		1		1
+lowH, 	highH, 	lowS, 	highS, 	lowV, 	highV, 	device#/filename, 	port, 	minArea maxArea minCirc	opening closing objsize	hfov	distCut	cutoffCompass	interlaced	console

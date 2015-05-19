@@ -72,7 +72,7 @@ void Coords::CalculateCoords(const cv::Mat& imgOriginal,
 	else {
 		cvtColor(imgOriginal, imgHSV, COLOR_BGR2HSV); //Convert the captured frame from BGR to HSV
 	}
-	Mat imgHSV2 = imgHSV.clone();
+	Mat imgHSV2(imgHSV.clone());
 
 	// Filtrera ut alla bildpunkter som omfattas av filtrets parametrar
 	inRange(imgHSV, Scalar(filter.lowH, filter.lowS, filter.lowV),
@@ -81,7 +81,7 @@ void Coords::CalculateCoords(const cv::Mat& imgOriginal,
 	//Hitta nästan-vita bildpunkter för att kunna detektera överexponerade objekt	
 	inRange(imgHSV2, Scalar(0, 0, 245),	Scalar(255, 255, 255), imgHSV2); 
 
-	imgHSV += imgHSV2; //addera för att möjliggöra detektion även vid överexponering
+	imgHSV = imgHSV + imgHSV2; //addera för att möjliggöra detektion även vid överexponering
 
 	// Utför bara de morfologiska operationerna om värdena på dem är > 0
 	if (filter.open) {
