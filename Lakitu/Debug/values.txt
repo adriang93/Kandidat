@@ -1,2 +1,0 @@
-4 	40 	34	147 	59 	255	test2.avi 		6550 	100 	250 	10 	1 	4 	100		1
-lowH, 	highH, 	lowS, 	highS, 	lowV, 	highV, 	device#/filename, 	port, 	minArea maxArea minCirc	opening closing cutoffCompass	interlaced
